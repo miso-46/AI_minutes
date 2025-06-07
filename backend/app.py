@@ -1,10 +1,11 @@
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from db_control import models, schemas, crud, connect
 from routers import auth, chat, minutes, summary
 import os
 from dotenv import load_dotenv
+from utils.auth import get_current_user_id  #あとで消す
 
 app = FastAPI()
 
@@ -27,11 +28,15 @@ app.add_middleware(
 models.Base.metadata.create_all(bind=connect.engine)
 
 # ルーターを追加
-app.include_router(auth.router)
-app.include_router(chat.router)
-app.include_router(minutes.router)
-app.include_router(summary.router)
+# app.include_router(auth.router)
+# app.include_router(chat.router)
+# app.include_router(minutes.router)
+# app.include_router(summary.router)
 
 @app.get("/")
 def root():
     return {"message": "Hello World"}
+
+@app.get("/api/test-user-id") #あとで消す
+def test_user_id(user_id: str = Depends(get_current_user_id)):
+    return {"user_id": user_id}
