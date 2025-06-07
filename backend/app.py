@@ -1,41 +1,37 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from db_control import models, schemas, crud, connect
+from routers import auth, chat, minutes, summary
+import os
+from dotenv import load_dotenv
 
 app = FastAPI()
+
+# 環境変数の読み込み
+load_dotenv()
+
+# フロントエンドのURLを環境変数から取得
+frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")  # デフォルトをローカル開発環境に設定
 
 # CORSの設定 フロントエンドからの接続を許可する部分
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"]
+    allow_origins=[frontend_url],  # 許可するオリジン
+    allow_credentials=True, # Cookie や認証情報を許可
+    allow_methods=["*"], # すべてのHTTPメソッド（GET, POST, PUT, DELETEなど）を許可
+    allow_headers=["*"] # すべてのHTTPヘッダーを許可
 )
 
-# データのスキーマを定義するためのクラス
-class EchoMessage(BaseModel):
-    message: str | None = None
+# DB初期化
+models.Base.metadata.create_all(bind=connect.engine)
+
+# ルーターを追加
+app.include_router(auth.router)
+app.include_router(chat.router)
+app.include_router(minutes.router)
+app.include_router(summary.router)
 
 @app.get("/")
-def hello():
-    return {"message": "FastAPI hello!"}
-
-@app.get("/api/hello")
-def hello_world():
-    return {"message": "Hello World by FastAPI"}
-
-@app.get("/api/multiply/{id}")
-def multiply(id: int):
-    print("multiply")
-    doubled_value = id * 2
-    return {"doubled_value": doubled_value}
-
-@app.post("/api/echo")
-def echo(message: EchoMessage):
-    print("echo")
-    if not message:
-        raise HTTPException(status_code=400, detail="Invalid JSON")
-
-    echo_message = message.message if message.message else "No message provided"
-    return {"message": f"echo: {echo_message}"}
+def root():
+    return {"message": "Hello World"}
