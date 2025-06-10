@@ -1,8 +1,13 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from . import models, schemas
 import uuid
 import os
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def create_minutes(db: Session, user_id: str, filename: str = None) -> int:
     # ファイル名から拡張子を除去
@@ -133,3 +138,159 @@ async def update_transcript_embedded(db: Session, transcript_id: int) -> bool:
         db.rollback()
         print(f"文字起こしの埋め込みフラグ更新中にエラーが発生: {str(e)}")
         return False
+
+def get_summary_by_transcript_id(db: Session, transcript_id: str):
+    """
+    文字起こしIDからサマリーを取得
+    """
+    return db.query(models.Summary).filter(
+        models.Summary.transcript_id == transcript_id
+    ).first()
+
+def create_summary(db: Session, transcript_id: str, content: str):
+    """
+    サマリーを作成
+    """
+    try:
+        # 既存のサマリーを確認
+        existing_summary = get_summary_by_transcript_id(db, transcript_id)
+        if existing_summary:
+            logger.info(f"既存のサマリーが見つかりました: summary_id={existing_summary.id}")
+            return existing_summary
+
+        # 新しいサマリーを作成
+        summary = models.Summary(
+            transcript_id=transcript_id,
+            content=content
+        )
+        db.add(summary)
+        db.commit()
+        db.refresh(summary)
+        logger.info(f"新しいサマリーを作成しました: summary_id={summary.id}")
+        return summary
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"サマリーの作成中に整合性エラーが発生しました: {str(e)}")
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"サマリーの作成中にエラーが発生しました: {str(e)}")
+        raise
+
+def get_transcript_by_id(db: Session, transcript_id: int) -> models.Transcript:
+    """
+    文字起こしIDから文字起こしデータを取得する
+    """
+    return db.query(models.Transcript).filter(models.Transcript.id == transcript_id).first()
+
+def get_transcript_by_video_id(db: Session, video_id: int) -> models.Transcript:
+    """
+    動画IDから文字起こしデータを取得する
+    """
+    return db.query(models.Transcript).filter(models.Transcript.video_id == video_id).first()
+
+def get_video_by_minutes_id(db: Session, minutes_id: int) -> models.Video:
+    """
+    議事録IDから動画データを取得する
+    
+    Args:
+        db (Session): データベースセッション
+        minutes_id (int): 議事録ID
+        
+    Returns:
+        models.Video: 動画データ
+    """
+    return db.query(models.Video).filter(models.Video.minutes_id == minutes_id).first()
+
+def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: str, transcript_id: str):
+    """
+    議事録IDと文字起こしIDからチャットセッションを取得
+    """
+    return db.query(models.ChatSession).filter(
+        models.ChatSession.minutes_id == minutes_id,
+        models.ChatSession.transcript_id == transcript_id
+    ).first()
+
+def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
+    """
+    チャットセッションを作成
+    """
+    try:
+        # 既存のセッションを確認
+        existing_session = get_chat_session_by_minutes_and_transcript(db, minutes_id, transcript_id)
+        if existing_session:
+            logger.info(f"既存のチャットセッションが見つかりました: session_id={existing_session.id}")
+            return existing_session
+
+        # 新しいセッションを作成
+        chat_session = models.ChatSession(
+            id=str(uuid.uuid4()),
+            minutes_id=minutes_id,
+            transcript_id=transcript_id
+        )
+        db.add(chat_session)
+        db.commit()
+        db.refresh(chat_session)
+        logger.info(f"新しいチャットセッションを作成しました: session_id={chat_session.id}")
+        return chat_session
+    except IntegrityError as e:
+        db.rollback()
+        logger.error(f"チャットセッションの作成中に整合性エラーが発生しました: {str(e)}")
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"チャットセッションの作成中にエラーが発生しました: {str(e)}")
+        raise
+
+def get_chat_session(db: Session, session_id: str):
+    """
+    チャットセッションを取得
+    """
+    return db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
+
+def create_chat_message(db: Session, chat_session_id: str, role: str, content: str):
+    """
+    チャットメッセージを作成
+    """
+    try:
+        chat_message = models.ChatMessage(
+            id=str(uuid.uuid4()),
+            chat_session_id=chat_session_id,
+            role=role,
+            content=content
+        )
+        db.add(chat_message)
+        db.commit()
+        db.refresh(chat_message)
+        return chat_message
+    except Exception as e:
+        db.rollback()
+        logger.error(f"チャットメッセージの作成中にエラーが発生しました: {str(e)}")
+        raise
+
+def get_chat_messages(db: Session, chat_session_id: str, skip: int = 0, limit: int = 100):
+    """
+    チャットメッセージを取得
+    """
+    return db.query(models.ChatMessage).filter(
+        models.ChatMessage.chat_session_id == chat_session_id
+    ).order_by(models.ChatMessage.created_at).offset(skip).limit(limit).all()
+
+def update_summary(db: Session, transcript_id: int, content: str) -> models.Summary:
+    """
+    既存のサマリーを更新する
+    
+    Args:
+        db (Session): データベースセッション
+        transcript_id (int): 文字起こしID
+        content (str): 更新する要約内容
+        
+    Returns:
+        models.Summary: 更新されたサマリー
+    """
+    summary = db.query(models.Summary).filter(models.Summary.transcript_id == transcript_id).first()
+    if summary:
+        summary.content = content
+        db.commit()
+        db.refresh(summary)
+    return summary

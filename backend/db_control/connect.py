@@ -27,7 +27,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
 # データベース接続テスト
 if __name__ == "__main__":
     try:
@@ -36,3 +35,4 @@ if __name__ == "__main__":
         db.close()
     except Exception as e:
         print("❌ エラーが発生しました:", e)
+

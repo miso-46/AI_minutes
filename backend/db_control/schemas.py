@@ -97,3 +97,16 @@ class VideoUploadResultResponse(BaseModel):
     title: str
     video_url: str
     transcript: List[TranscriptResponse]
+
+class SummaryRequest(BaseModel):
+    transcript_id: int
+
+class SummaryResponse(BaseModel):
+    summary: str
+
+class ChatStartRequest(BaseModel):
+    minutes_id: int
+
+class ChatStartResponse(BaseModel):
+    is_embedded: bool
+    session_id: Optional[str] = None
