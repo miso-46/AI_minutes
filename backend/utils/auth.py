@@ -34,6 +34,9 @@ async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depend
         HTTPException: 認証に失敗した場合
     """
     try:
+        logger.info("認証処理を開始します")
+        logger.info(f"認証ヘッダー: {credentials.credentials[:10]}...")  # トークンの一部のみをログ出力
+        
         # Supabaseの認証エンドポイントにリクエスト
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -44,13 +47,17 @@ async def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depend
                 }
             )
             
+            logger.info(f"Supabase認証レスポンス: {response.status_code}")
+            
             if response.status_code != 200:
+                logger.error(f"認証エラー: {response.text}")
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="認証に失敗しました"
                 )
             
             user_data = response.json()
+            logger.info(f"認証成功: ユーザーID {user_data['id']}")
             return user_data["id"]
             
     except Exception as e:

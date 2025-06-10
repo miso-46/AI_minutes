@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Float, DateTime, Enum, Numeric
+from sqlalchemy import Column, Integer, String, ForeignKey, Boolean, Float, DateTime, Enum, Numeric, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -25,32 +25,31 @@ class Minutes(Base):
 class Video(Base):
     __tablename__ = "video"
 
-    id = Column(Integer, primary_key=True, index=True)
-    minutes_id = Column(Integer, ForeignKey("minutes.id"), nullable=False)
-    video_url = Column(String)
+    id = Column(String, primary_key=True)
+    minutes_id = Column(String, ForeignKey("minutes.id"), nullable=False)
+    video_url = Column(String, nullable=False)
     image_url = Column(String)
     status = Column(String, nullable=False)
-    progress = Column(Integer)
+    progress = Column(Integer, default=0)
     recorded_at = Column(DateTime)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     minutes = relationship("Minutes", back_populates="videos")
-    transcripts = relationship("Transcript", back_populates="video")
+    transcript = relationship("Transcript", back_populates="video", uselist=False)
 
 # 文字起こし（transcript）テーブル：動画から生成された文字起こしの本文を格納
 class Transcript(Base):
     __tablename__ = "transcript"
 
-    id = Column(Integer, primary_key=True, index=True)
-    video_id = Column(Integer, ForeignKey("video.id"), nullable=False)
-    content = Column(String, nullable=False)
-    is_summaried = Column(Boolean, default=False, nullable=False)
+    id = Column(String, primary_key=True)
+    video_id = Column(String, ForeignKey("video.id"), nullable=False)
+    content = Column(Text, nullable=False)
     is_embedded = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    video = relationship("Video", back_populates="transcripts")
+    video = relationship("Video", back_populates="transcript", uselist=False)
     transcript_chunks = relationship("TranscriptChunk", back_populates="transcript")
-    summaries = relationship("Summary", back_populates="transcript")
+    summary = relationship("Summary", back_populates="transcript", uselist=False)
     chat_sessions = relationship("ChatSession", back_populates="transcript")
 
 # 文字起こしチャンク（transcript_chunk）テーブル：長文の文字起こしを分割して格納
@@ -82,11 +81,11 @@ class Summary(Base):
     __tablename__ = "summary"
 
     id = Column(Integer, primary_key=True, index=True)
-    transcript_id = Column(Integer, ForeignKey("transcript.id"), nullable=False)
-    content = Column(String, nullable=False)
-    created_at = Column(DateTime, default=func.now())
+    transcript_id = Column(String, ForeignKey("transcript.id"), unique=True, nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    transcript = relationship("Transcript", back_populates="summaries")
+    transcript = relationship("Transcript", back_populates="summary", uselist=False)
 
 # チャットセッション（chat_session）テーブル：1議事録あたりのチャットセッションを格納
 class ChatSession(Base):
@@ -100,6 +99,11 @@ class ChatSession(Base):
     minutes = relationship("Minutes", back_populates="chat_sessions")
     transcript = relationship("Transcript", back_populates="chat_sessions")
     chat_messages = relationship("ChatMessage", back_populates="chat_session")
+
+    # minutes_idとtranscript_idの組み合わせにユニーク制約を追加
+    __table_args__ = (
+        UniqueConstraint('minutes_id', 'transcript_id', name='uix_minutes_transcript'),
+    )
 
 # チャットメッセージ（chat_message）テーブル：ユーザーとアシスタントのメッセージログを格納
 class ChatMessage(Base):

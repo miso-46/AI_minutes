@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from db_control import crud, schemas
 from db_control.connect import get_db
 from utils.auth import get_current_user_id
@@ -68,9 +69,6 @@ async def generate_summary(
                 detail="この議事録へのアクセス権限がありません"
             )
         
-        # 既存の要約を確認
-        existing_summary = crud.get_summary_by_transcript_id(db, request.transcript_id)
-        
         # Azure OpenAIを使用して要約を生成
         try:
             # 文字起こしの内容を取得（content属性を使用）
@@ -89,10 +87,7 @@ async def generate_summary(
             summary_content = response.choices[0].message.content
             
             # 要約を保存
-            if existing_summary:
-                summary = crud.update_summary(db, request.transcript_id, summary_content)
-            else:
-                summary = crud.create_summary(db, request.transcript_id, summary_content)
+            summary = crud.create_summary(db, request.transcript_id, summary_content)
             
             return {"summary": summary.content}
             
@@ -103,7 +98,7 @@ async def generate_summary(
                 status_code=500,
                 detail=error_message
             )
-            
+        
     except HTTPException:
         raise
     except Exception as e:

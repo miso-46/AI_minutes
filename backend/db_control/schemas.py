@@ -103,3 +103,10 @@ class SummaryRequest(BaseModel):
 
 class SummaryResponse(BaseModel):
     summary: str
+
+class ChatStartRequest(BaseModel):
+    minutes_id: int
+
+class ChatStartResponse(BaseModel):
+    is_embedded: bool
+    session_id: Optional[str] = None

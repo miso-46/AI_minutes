@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from db_control import models, schemas, crud, connect
-from routers import minutes, summary
+from routers import minutes, summary, chat
 import os
 from dotenv import load_dotenv
 from utils.auth import get_current_user_id  #あとで消す
@@ -22,7 +22,7 @@ load_dotenv()
 # フロントエンドのURLを環境変数から取得
 frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")  # デフォルトをローカル開発環境に設定
 
-# CORSの設定 フロントエンドからの接続を許可する部分
+# CORSの設定
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[frontend_url],  # 許可するオリジン
@@ -37,9 +37,10 @@ models.Base.metadata.create_all(bind=connect.engine)
 # ルーターを追加
 app.include_router(minutes.router)
 app.include_router(summary.router)
+app.include_router(chat.router)
 
 @app.get("/")
-def read_root():
+def root():
     return {"message": "Welcome to the Minutes API"}
 
 @app.get("/test-user-id") #あとで消す
