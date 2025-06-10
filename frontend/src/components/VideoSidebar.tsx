@@ -1,0 +1,34 @@
+"use client";
+import React from 'react';
+import { VideoThumbnail } from './VideoThumbnail';
+import { TranscriptionSection } from '@/components/TranscriptionSection';
+
+export const VideoSidebar: React.FC = () => {
+  return (
+    <aside className="flex flex-col w-80 h-full max-md:w-[280px] max-sm:w-full max-sm:h-auto overflow-hidden">
+      {/* 固定ヘッダー部分 */}
+      <div className="flex-shrink-0">
+        <h2 className="px-4 pt-5 pb-2 w-full text-2xl font-bold leading-8 text-neutral-900 max-md:text-2xl max-sm:px-3 max-sm:pt-4 max-sm:pb-2 max-sm:text-xl">
+          アップロードした動画
+        </h2>
+
+        <section className="flex flex-wrap gap-4 items-end px-4 py-3 w-full max-sm:p-3">
+          <div className="flex flex-col flex-1 items-start min-w-40">
+            <h3 className="pb-2 w-full text-base font-bold leading-6 text-neutral-900 max-sm:text-sm">
+              動画タイトル
+            </h3>
+          </div>
+        </section>
+
+        {/* Video Thumbnail Section */}
+        <VideoThumbnail />
+
+      </div>
+
+      {/* スクロール可能な文字起こしセクション */}
+      <TranscriptionSection />
+      
+      <div className="flex items-start px-4 py-3 w-full h-16 max-sm:p-3 max-sm:h-auto flex-shrink-0" />
+    </aside>
+  );
+};
