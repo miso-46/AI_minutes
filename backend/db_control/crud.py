@@ -3,6 +3,7 @@ from sqlalchemy import func
 from . import models, schemas
 import uuid
 import os
+from datetime import datetime
 
 async def create_minutes(db: Session, user_id: str, filename: str = None) -> int:
     # ファイル名から拡張子を除去
@@ -133,3 +134,54 @@ async def update_transcript_embedded(db: Session, transcript_id: int) -> bool:
         db.rollback()
         print(f"文字起こしの埋め込みフラグ更新中にエラーが発生: {str(e)}")
         return False
+
+def create_summary(db: Session, transcript_id: int, content: str) -> models.Summary:
+    """
+    要約を作成する
+    
+    Args:
+        db (Session): データベースセッション
+        transcript_id (int): 文字起こしID
+        content (str): 要約内容
+        
+    Returns:
+        models.Summary: 作成された要約
+    """
+    summary = models.Summary(
+        transcript_id=transcript_id,
+        content=content
+    )
+    db.add(summary)
+    db.commit()
+    db.refresh(summary)
+    return summary
+
+def get_summary_by_transcript_id(db: Session, transcript_id: int) -> models.Summary:
+    """
+    文字起こしIDから要約データを取得する
+    """
+    return db.query(models.Summary).filter(models.Summary.transcript_id == transcript_id).first()
+
+def update_summary(db: Session, transcript_id: int, content: str) -> models.Summary:
+    """
+    要約データを更新する
+    """
+    db_summary = get_summary_by_transcript_id(db, transcript_id)
+    if db_summary:
+        db_summary.content = content
+        db_summary.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(db_summary)
+    return db_summary
+
+def get_transcript_by_id(db: Session, transcript_id: int) -> models.Transcript:
+    """
+    文字起こしIDから文字起こしデータを取得する
+    """
+    return db.query(models.Transcript).filter(models.Transcript.id == transcript_id).first()
+
+def get_transcript_by_video_id(db: Session, video_id: int) -> models.Transcript:
+    """
+    動画IDから文字起こしデータを取得する
+    """
+    return db.query(models.Transcript).filter(models.Transcript.video_id == video_id).first()

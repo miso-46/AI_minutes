@@ -2,10 +2,17 @@ from fastapi import FastAPI, HTTPException, Query, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from db_control import models, schemas, crud, connect
-from routers import minutes
+from routers import minutes, summary
 import os
 from dotenv import load_dotenv
 from utils.auth import get_current_user_id  #あとで消す
+import logging
+
+# ロギングの設定
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 app = FastAPI()
 
@@ -29,10 +36,11 @@ models.Base.metadata.create_all(bind=connect.engine)
 
 # ルーターを追加
 app.include_router(minutes.router)
+app.include_router(summary.router)
 
 @app.get("/")
-def root():
-    return {"message": "Hello World"}
+def read_root():
+    return {"message": "Welcome to the Minutes API"}
 
 @app.get("/test-user-id") #あとで消す
 def test_user_id(user_id: str = Depends(get_current_user_id)):

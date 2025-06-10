@@ -97,3 +97,9 @@ class VideoUploadResultResponse(BaseModel):
     title: str
     video_url: str
     transcript: List[TranscriptResponse]
+
+class SummaryRequest(BaseModel):
+    transcript_id: int
+
+class SummaryResponse(BaseModel):
+    summary: str
