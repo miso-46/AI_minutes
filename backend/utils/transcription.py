@@ -7,6 +7,9 @@ import mimetypes
 import logging
 import subprocess
 import shutil
+import aiohttp
+import asyncio
+from typing import List, Tuple
 
 # ロギングの設定
 logging.basicConfig(level=logging.INFO)
@@ -20,124 +23,158 @@ client = AzureOpenAI(
     azure_endpoint=os.getenv("AZURE_OPENAI_BASE_URL")
 )
 
-def compress_video(input_path: str, output_path: str) -> None:
-    """
-    動画ファイルを圧縮する
+MAX_SIZE = 25 * 1024 * 1024  # 25MB in bytes
+MAX_DURATION = 10 * 60  # 10分（秒）
+
+async def get_video_duration(file_path: str) -> float:
+    """動画の長さを取得する関数"""
+    command = [
+        'ffprobe', '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        file_path
+    ]
     
-    Args:
-        input_path (str): 入力ファイルのパス
-        output_path (str): 出力ファイルのパス
-    """
-    try:
-        # ffmpegを使用して動画を圧縮
-        command = [
-            'ffmpeg',
-            '-i', input_path,
-            '-c:v', 'libx264',
-            '-crf', '32',  # 圧縮率を上げる（画質は下がるが、処理が速くなる）
-            '-preset', 'ultrafast',  # 最速のプリセット
-            '-c:a', 'aac',
-            '-b:a', '96k',  # 音声ビットレートを下げる
-            '-y',  # 既存ファイルを上書き
-            output_path
-        ]
-        
-        logger.info("動画の圧縮を開始")
-        # リアルタイムでログを出力
-        process = subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            universal_newlines=True
-        )
-        
-        # 進捗をログに出力
-        while True:
-            output = process.stderr.readline()
-            if output == '' and process.poll() is not None:
-                break
-            if output:
-                logger.info(f"圧縮進捗: {output.strip()}")
-        
-        if process.returncode != 0:
-            _, stderr = process.communicate()
-            logger.error(f"圧縮エラー: {stderr}")
-            raise Exception(f"動画の圧縮に失敗しました: {stderr}")
-            
-        logger.info("動画の圧縮が完了")
-        
-    except Exception as e:
-        logger.error(f"圧縮処理中にエラーが発生: {str(e)}")
-        raise
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    stdout, stderr = await process.communicate()
+    
+    if process.returncode != 0:
+        raise Exception(f"動画の長さ取得に失敗しました: {stderr.decode()}")
+    
+    return float(stdout.decode().strip())
+
+async def compress_video(input_path: str, output_path: str) -> None:
+    """動画を圧縮する関数"""
+    command = [
+        'ffmpeg', '-i', input_path,
+        '-c:v', 'libx264',
+        '-crf', '28',  # より高い圧縮率
+        '-preset', 'medium',
+        '-vf', 'scale=1280:720',  # 720pに解像度を下げる
+        '-r', '24',  # フレームレートを24fpsに下げる
+        '-c:a', 'aac',
+        '-b:a', '96k',  # 音声ビットレートを96kに下げる
+        '-y', output_path
+    ]
+    
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    stdout, stderr = await process.communicate()
+    
+    if process.returncode != 0:
+        raise Exception(f"動画の圧縮に失敗しました: {stderr.decode()}")
+
+async def split_video(input_path: str, output_dir: str, segment_duration: int = 600) -> List[str]:
+    """動画を分割する関数"""
+    command = [
+        'ffmpeg', '-i', input_path,
+        '-c:v', 'libx264',
+        '-crf', '28',
+        '-preset', 'medium',
+        '-vf', 'scale=1280:720',
+        '-r', '24',
+        '-c:a', 'aac',
+        '-b:a', '96k',
+        '-f', 'segment',
+        '-segment_time', str(segment_duration),
+        '-reset_timestamps', '1',
+        '-y',
+        os.path.join(output_dir, 'segment_%03d.mp4')
+    ]
+    
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    stdout, stderr = await process.communicate()
+    
+    if process.returncode != 0:
+        raise Exception(f"動画の分割に失敗しました: {stderr.decode()}")
+    
+    # 分割されたファイルのリストを取得
+    segments = sorted([f for f in os.listdir(output_dir) if f.startswith('segment_')])
+    return [os.path.join(output_dir, segment) for segment in segments]
 
 async def transcribe_video(video_url: str) -> str:
-    """
-    Azure OpenAIのWhisperを使用して動画の文字起こしを行う
-    
-    Args:
-        video_url (str): 文字起こし対象の動画URL
-        
-    Returns:
-        str: 文字起こし結果のテキスト
-    """
-    temp_file_path = None
-    compressed_file_path = None
+    """動画の文字起こしを行う関数"""
+    temp_dir = None
     try:
-        logger.info(f"動画のダウンロードを開始: {video_url}")
+        # 一時ディレクトリの作成
+        temp_dir = tempfile.mkdtemp()
+        temp_input = os.path.join(temp_dir, 'input.mp4')
+        temp_output = os.path.join(temp_dir, 'output.mp4')
         
-        # 動画URLからファイルをダウンロード
-        response = requests.get(video_url)
-        logger.info(f"ダウンロードレスポンス: status={response.status_code}, headers={dict(response.headers)}")
+        # 動画のダウンロード
+        async with aiohttp.ClientSession() as session:
+            async with session.get(video_url) as response:
+                if response.status != 200:
+                    raise Exception(f"動画のダウンロードに失敗しました: {response.status}")
+                content = await response.read()
+                with open(temp_input, 'wb') as f:
+                    f.write(content)
         
-        if response.status_code != 200:
-            raise Exception(f"動画のダウンロードに失敗しました: {response.status_code}, レスポンス: {response.text}")
+        # 動画の長さを取得
+        duration = await get_video_duration(temp_input)
+        logger.info(f"動画の長さ: {duration}秒")
         
-        # Content-Typeからファイル形式を取得
-        content_type = response.headers.get('content-type', '')
-        logger.info(f"Content-Type: {content_type}")
+        # 動画の圧縮
+        logger.info("動画の圧縮を開始")
+        await compress_video(temp_input, temp_output)
         
-        ext = mimetypes.guess_extension(content_type)
-        if not ext:
-            ext = '.mp4'  # デフォルトの拡張子
-        logger.info(f"使用する拡張子: {ext}")
-        
-        # 一時ファイルとして動画を保存
-        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as temp_file:
-            temp_file.write(response.content)
-            temp_file_path = temp_file.name
-            logger.info(f"一時ファイルを作成: {temp_file_path}")
-        
-        # 圧縮用の一時ファイルを作成
-        with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as compressed_file:
-            compressed_file_path = compressed_file.name
-        
-        # 動画を圧縮
-        compress_video(temp_file_path, compressed_file_path)
-        
-        # 圧縮後のファイルサイズを確認
-        compressed_size = os.path.getsize(compressed_file_path)
+        # 圧縮後のファイルサイズをチェック
+        compressed_size = os.path.getsize(temp_output)
         logger.info(f"圧縮後のファイルサイズ: {compressed_size} bytes")
         
-        # Azure OpenAIのWhisperを使用して文字起こしを実行
-        logger.info("文字起こしを開始")
-        with open(compressed_file_path, "rb") as audio_file:
-            response = client.audio.transcriptions.create(
-                file=audio_file,
-                model=os.getenv("AZURE_OPENAI_DEPLOYMENT_WHISPER")
-            )
-        logger.info("文字起こしが完了")
-        
-        return response.text
-        
+        if compressed_size <= MAX_SIZE:
+            # 圧縮後のファイルが制限内の場合、そのまま文字起こし
+            logger.info("圧縮後のファイルが制限内のため、そのまま文字起こしを実行")
+            with open(temp_output, 'rb') as audio_file:
+                response = client.audio.transcriptions.create(
+                    model=os.getenv("AZURE_OPENAI_DEPLOYMENT_WHISPER"),
+                    file=audio_file,
+                    response_format="text"
+                )
+            return response
+        else:
+            # 圧縮後のファイルが制限を超える場合、分割して処理
+            logger.info("圧縮後のファイルが制限を超えるため、分割して処理")
+            segments = await split_video(temp_input, temp_dir)
+            transcriptions = []
+            
+            for i, segment in enumerate(segments):
+                logger.info(f"セグメント {i+1}/{len(segments)} の文字起こしを開始")
+                with open(segment, 'rb') as audio_file:
+                    response = client.audio.transcriptions.create(
+                        model=os.getenv("AZURE_OPENAI_DEPLOYMENT_WHISPER"),
+                        file=audio_file,
+                        response_format="text"
+                    )
+                transcriptions.append(response)
+            
+            # 文字起こし結果を結合
+            return " ".join(transcriptions)
+            
     except Exception as e:
-        logger.error(f"エラーが発生: {str(e)}", exc_info=True)
+        logger.error(f"エラーが発生: {str(e)}")
         raise Exception(f"文字起こし処理中にエラーが発生しました: {str(e)}")
     finally:
         # 一時ファイルの削除
-        for file_path in [temp_file_path, compressed_file_path]:
-            if file_path and os.path.exists(file_path):
-                try:
-                    os.unlink(file_path)
-                    logger.info(f"一時ファイルを削除: {file_path}")
-                except Exception as e:
-                    logger.error(f"一時ファイルの削除に失敗: {str(e)}")
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                for file in os.listdir(temp_dir):
+                    os.unlink(os.path.join(temp_dir, file))
+                os.rmdir(temp_dir)
+                logger.info(f"一時ディレクトリを削除: {temp_dir}")
+            except Exception as e:
+                logger.error(f"一時ファイルの削除に失敗: {str(e)}")

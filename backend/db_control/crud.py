@@ -71,11 +71,65 @@ async def create_vector_embedding(db: Session, chunk_id: int, embedding: str) ->
     db.refresh(db_embedding)
     return db_embedding.id
 
-async def get_minutes(db: Session, minutes_id: int):
-    return db.query(models.Minutes).filter(models.Minutes.id == minutes_id).first()
+def get_minutes(db: Session, minutes_id: int):
+    minutes = db.query(models.Minutes).filter(models.Minutes.id == minutes_id).first()
+    if minutes:
+        print(f"get_minutes - 取得したデータ: id={minutes.id}, user_id={minutes.user_id}, title={minutes.title}")
+    else:
+        print(f"get_minutes - データが見つかりません: minutes_id={minutes_id}")
+    return minutes
 
-async def get_video(db: Session, minutes_id: int):
+def get_video(db: Session, minutes_id: int):
     return db.query(models.Video).filter(models.Video.minutes_id == minutes_id).first()
 
-async def get_transcript(db: Session, video_id: int):
+def get_transcript(db: Session, video_id: int):
     return db.query(models.Transcript).filter(models.Transcript.video_id == video_id).first()
+
+async def update_video_progress(db: Session, minutes_id: int, progress: int) -> bool:
+    """
+    動画の処理進捗を更新する
+    
+    Args:
+        db (Session): データベースセッション
+        minutes_id (int): 議事録ID
+        progress (int): 進捗状況（0-100）
+        
+    Returns:
+        bool: 更新が成功したかどうか
+    """
+    try:
+        video = db.query(models.Video).filter(models.Video.minutes_id == minutes_id).first()
+        if not video:
+            return False
+        
+        video.progress = progress
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"進捗更新中にエラーが発生: {str(e)}")
+        return False
+
+async def update_transcript_embedded(db: Session, transcript_id: int) -> bool:
+    """
+    文字起こしデータの埋め込み完了フラグを更新する
+    
+    Args:
+        db (Session): データベースセッション
+        transcript_id (int): 文字起こしID
+        
+    Returns:
+        bool: 更新が成功したかどうか
+    """
+    try:
+        transcript = db.query(models.Transcript).filter(models.Transcript.id == transcript_id).first()
+        if not transcript:
+            return False
+        
+        transcript.is_embedded = True
+        db.commit()
+        return True
+    except Exception as e:
+        db.rollback()
+        print(f"文字起こしの埋め込みフラグ更新中にエラーが発生: {str(e)}")
+        return False

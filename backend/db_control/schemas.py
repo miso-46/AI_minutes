@@ -6,6 +6,11 @@ class VideoUploadResponse(BaseModel):
     minutes_id: int
     status: str
 
+class VideoUploadStatusResponse(BaseModel):
+    minutes_id: int
+    status: str
+    progress: int
+
 class MinutesBase(BaseModel):
     user_id: str
     title: str
@@ -82,3 +87,13 @@ class VectorEmbedding(VectorEmbeddingBase):
 
     class Config:
         from_attributes = True
+
+class TranscriptResponse(BaseModel):
+    transcript_id: int
+    transcript_content: str
+
+class VideoUploadResultResponse(BaseModel):
+    minutes_id: int
+    title: str
+    video_url: str
+    transcript: List[TranscriptResponse]

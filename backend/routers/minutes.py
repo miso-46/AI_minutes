@@ -1,15 +1,22 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks
+from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from typing import List
 import asyncio
 from db_control import crud, schemas
 from utils.auth import get_current_user_id
 from utils import transcription, storage, chunk, embedding
 from sqlalchemy.orm import Session
-from db_control.connect import get_db
+from db_control.connect import get_db, SessionLocal
 import tempfile
 import os
+from datetime import datetime
+import uuid
+import logging
 
-router = APIRouter()
+# ロギングの設定
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+router = APIRouter(tags=["Minutes"])
 
 ALLOWED_EXTENSIONS = {'mp4', 'mov'}
 
@@ -54,16 +61,20 @@ async def upload_video(
     except Exception as e:
         # エラー発生時の処理
         error_message = f"動画のアップロード中にエラーが発生しました: {str(e)}"
-        print(error_message)  # ログ出力
+        logger.error(error_message)  # ログ出力
         raise HTTPException(
             status_code=500,
             detail=error_message
         )
 
 async def process_video(file_path: str, minutes_id: int, db: Session):
+    """
+    動画の処理を行う関数
+    """
     try:
         # 処理開始を通知
         await crud.update_video_status(db, minutes_id, "processing")
+        await crud.update_video_progress(db, minutes_id, 0)
         
         # 1. 動画をAzure Blob Storageにアップロード
         with open(file_path, 'rb') as f:
@@ -72,16 +83,22 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
             raise Exception("動画のアップロードに失敗しました")
         
         # 2. 動画データのURLを更新
-        video = await crud.get_video(db, minutes_id)
+        video = crud.get_video(db, minutes_id)
         if not video:
             raise Exception("動画データが見つかりません")
         video.video_url = video_url
         db.commit()
         
+        # 動画保存完了（30%）
+        await crud.update_video_progress(db, minutes_id, 30)
+        
         # 3. 文字起こしの実行
         transcript_content = await transcription.transcribe_video(video_url)
         if not transcript_content:
             raise Exception("文字起こしに失敗しました")
+        
+        # 文字起こし完了（60%）
+        await crud.update_video_progress(db, minutes_id, 60)
         
         # 4. 文字起こしデータの保存
         transcript_id = await crud.create_transcript(db, video.id, transcript_content)
@@ -93,34 +110,191 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
         if not chunks:
             raise Exception("チャンク分割に失敗しました")
         
+        # チャンク分割完了（80%）
+        await crud.update_video_progress(db, minutes_id, 80)
+        
         # 6. チャンクの保存とベクトル化
+        total_chunks = len(chunks)
         for i, chunk_content in enumerate(chunks):
-            chunk_id = await crud.create_transcript_chunk(db, transcript_id, i, chunk_content)
-            if not chunk_id:
-                raise Exception("チャンクの保存に失敗しました")
+            # 各チャンク処理ごとに新しいデータベースセッションを作成
+            chunk_db = SessionLocal()
+            try:
+                chunk_id = await crud.create_transcript_chunk(chunk_db, transcript_id, i, chunk_content)
+                if not chunk_id:
+                    raise Exception("チャンクの保存に失敗しました")
+                    
+                embedding_vector = await embedding.generate_embedding(chunk_content)
+                if not embedding_vector:
+                    raise Exception("ベクトル化に失敗しました")
+                    
+                await crud.create_vector_embedding(chunk_db, chunk_id, embedding_vector)
+                chunk_db.commit()
                 
-            embedding_vector = await embedding.generate_embedding(chunk_content)
-            if not embedding_vector:
-                raise Exception("ベクトル化に失敗しました")
-                
-            await crud.create_vector_embedding(db, chunk_id, embedding_vector)
+                # Embedding生成の進捗を更新（80-95%）
+                progress = 80 + int((i + 1) / total_chunks * 15)
+                await crud.update_video_progress(db, minutes_id, progress)
+            finally:
+                chunk_db.close()
+        
+        # すべてのチャンクのEmbedding生成が完了したら、is_embeddedを更新
+        await crud.update_transcript_embedded(db, transcript_id)
         
         # 7. 処理完了の更新
         await crud.update_video_status(db, minutes_id, "completed")
+        await crud.update_video_progress(db, minutes_id, 100)
         
     except Exception as e:
         # エラー発生時の処理
         error_message = f"動画処理中にエラーが発生しました: {str(e)}"
-        print(error_message)  # ログ出力
+        logger.error(error_message)
         try:
             db.rollback()  # トランザクションをロールバック
             await crud.update_video_status(db, minutes_id, "failed")
+            # エラー発生時の進捗を保持（最後に更新された進捗を維持）
         except Exception as update_error:
-            print(f"ステータス更新中にエラーが発生: {str(update_error)}")
+            logger.error(f"ステータス更新中にエラーが発生: {str(update_error)}")
         raise Exception(error_message)
     finally:
         # 一時ファイルの削除
         try:
             os.unlink(file_path)
         except Exception as e:
-            print(f"一時ファイルの削除に失敗: {str(e)}")
+            logger.error(f"一時ファイルの削除に失敗: {str(e)}")
+
+@router.get("/api/upload_status/", response_model=schemas.VideoUploadStatusResponse)
+def get_upload_status(
+    minutes_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    動画のアップロードと処理状況を取得する
+    
+    Args:
+        minutes_id (int): 議事録ID
+        user_id (str): 認証されたユーザーID
+        db (Session): データベースセッション
+        
+    Returns:
+        VideoUploadStatusResponse: アップロード状況
+    """
+    try:
+        # 議事録データを取得してユーザーIDを確認
+        minutes = crud.get_minutes(db, minutes_id)
+        if not minutes:
+            raise HTTPException(
+                status_code=404,
+                detail="指定された議事録IDのデータが見つかりません"
+            )
+        
+        # ユーザーIDの比較（文字列として比較）
+        if str(minutes.user_id) != str(user_id):
+            raise HTTPException(
+                status_code=403,
+                detail="この議事録へのアクセス権限がありません"
+            )
+        
+        # 動画データを取得
+        video = crud.get_video(db, minutes_id)
+        if not video:
+            raise HTTPException(
+                status_code=404,
+                detail="指定された議事録IDの動画が見つかりません"
+            )
+        
+        return schemas.VideoUploadStatusResponse(
+            minutes_id=minutes_id,
+            status=video.status,
+            progress=video.progress
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_message = f"アップロード状況の取得中にエラーが発生しました: {str(e)}"
+        logger.error(error_message)  # ログ出力
+        raise HTTPException(
+            status_code=500,
+            detail=error_message
+        )
+
+@router.get("/api/upload_result/", response_model=schemas.VideoUploadResultResponse)
+def get_upload_result(
+    minutes_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    動画のアップロードと処理結果を取得する
+    
+    Args:
+        minutes_id (int): 議事録ID
+        user_id (str): 認証されたユーザーID
+        db (Session): データベースセッション
+        
+    Returns:
+        VideoUploadResultResponse: アップロード結果
+    """
+    try:
+        # 議事録データを取得してユーザーIDを確認
+        minutes = crud.get_minutes(db, minutes_id)
+        if not minutes:
+            raise HTTPException(
+                status_code=404,
+                detail="指定された議事録IDのデータが見つかりません"
+            )
+        
+        # ユーザーIDの比較（文字列として比較）
+        if str(minutes.user_id) != str(user_id):
+            raise HTTPException(
+                status_code=403,
+                detail="この議事録へのアクセス権限がありません"
+            )
+        
+        # 動画データを取得
+        video = crud.get_video(db, minutes_id)
+        if not video:
+            raise HTTPException(
+                status_code=404,
+                detail="指定された議事録IDの動画が見つかりません"
+            )
+        
+        # 処理が完了していない場合はエラー
+        if video.status != "completed":
+            raise HTTPException(
+                status_code=400,
+                detail="動画の処理が完了していません"
+            )
+        
+        # 文字起こしデータを取得
+        transcript = crud.get_transcript(db, video.id)
+        if not transcript:
+            raise HTTPException(
+                status_code=404,
+                detail="文字起こしデータが見つかりません"
+            )
+        
+        # 動画のSAS URLを生成
+        video_url = storage.generate_sas_url(f"video_{minutes_id}.mp4", "video")
+        
+        return schemas.VideoUploadResultResponse(
+            minutes_id=minutes_id,
+            title=minutes.title,
+            video_url=video_url,
+            transcript=[
+                schemas.TranscriptResponse(
+                    transcript_id=transcript.id,
+                    transcript_content=transcript.content
+                )
+            ]
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        error_message = f"アップロード結果の取得中にエラーが発生しました: {str(e)}"
+        logger.error(error_message)  # ログ出力
+        raise HTTPException(
+            status_code=500,
+            detail=error_message
+        )

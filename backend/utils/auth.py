@@ -26,7 +26,13 @@ def get_current_user_id(credentials: HTTPAuthorizationCredentials = Depends(secu
     response = requests.get(f"{SUPABASE_URL}/auth/v1/user", headers=headers)
 
     if response.status_code != 200:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or expired token")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="アクセストークンが無効または期限切れです")
 
     user_data = response.json()
-    return user_data.get("id")
+    user_id = user_data.get("id")
+    
+    # デバッグ用のログ出力
+    print(f"Supabaseから取得したユーザーID: {user_id}")
+    print(f"ユーザーデータ全体: {user_data}")
+    
+    return user_id
