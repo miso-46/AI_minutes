@@ -19,7 +19,7 @@ class Minutes(Base):
     created_at = Column(DateTime, default=func.now())
 
     videos = relationship("Video", back_populates="minutes")
-    chat_sessions = relationship("ChatSession", back_populates="minutes")
+    chat_session = relationship("ChatSession", back_populates="minutes")
 
 # 動画（video）テーブル：議事録に紐づくアップロード動画の情報を格納
 class Video(Base):
@@ -51,7 +51,7 @@ class Transcript(Base):
     video = relationship("Video", back_populates="transcript", uselist=False)
     transcript_chunks = relationship("TranscriptChunk", back_populates="transcript")
     summary = relationship("Summary", back_populates="transcript", uselist=False)
-    chat_sessions = relationship("ChatSession", back_populates="transcript")
+    chat_session = relationship("ChatSession", back_populates="transcript")
 
 # 文字起こしチャンク（transcript_chunk）テーブル：長文の文字起こしを分割して格納
 class TranscriptChunk(Base):
@@ -63,7 +63,7 @@ class TranscriptChunk(Base):
     content = Column(String, nullable=False)
 
     transcript = relationship("Transcript", back_populates="transcript_chunks")
-    vector_embeddings = relationship("VectorEmbedding", back_populates="transcript_chunk")
+    vector_embedding = relationship("VectorEmbedding", back_populates="transcript_chunk")
     references = relationship("Reference", back_populates="transcript_chunk")
 
 # ベクトル埋め込み（vector_embedding）テーブル：文字起こしチャンクのベクトル情報を格納
@@ -75,7 +75,7 @@ class VectorEmbedding(Base):
     embedding = Column(String)  # SQLAlchemyではfloat配列が扱いづらいため、一旦Stringで保持
     created_at = Column(DateTime, default=func.now())
 
-    transcript_chunk = relationship("TranscriptChunk", back_populates="vector_embeddings")
+    transcript_chunk = relationship("TranscriptChunk", back_populates="vector_embedding")
 
 # 要約（summary）テーブル：文字起こしの要約を格納
 class Summary(Base):
@@ -97,8 +97,8 @@ class ChatSession(Base):
     transcript_id = Column(Integer, ForeignKey("transcript.id"), nullable=False)
     started_at = Column(DateTime, default=func.now())
 
-    minutes = relationship("Minutes", back_populates="chat_sessions")
-    transcript = relationship("Transcript", back_populates="chat_sessions")
+    minutes = relationship("Minutes", back_populates="chat_session")
+    transcript = relationship("Transcript", back_populates="chat_session")
     chat_messages = relationship("ChatMessage", back_populates="chat_session")
 
     # minutes_idとtranscript_idの組み合わせにユニーク制約を追加
@@ -112,7 +112,7 @@ class ChatMessage(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(Integer, ForeignKey("chat_session.id"), nullable=False)
-    role = Column(String, nullable=False)  # user or assistant
+    role = Column(String, nullable=False)
     message = Column(String, nullable=False)
     created_at = Column(DateTime, default=func.now())
 

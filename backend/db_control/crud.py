@@ -330,3 +330,48 @@ def get_all_minutes_by_user_id(db: Session, user_id: str):
     ).all()
     
     return results
+
+def get_minutes_detail(db: Session, minutes_id: int, user_id: str):
+    """
+    議事録の詳細情報を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        minutes_id (int): 議事録ID
+        user_id (str): ユーザーID
+        
+    Returns:
+        Tuple[Video, Transcript, Summary, ChatSession, List[ChatMessage]]: 
+            動画、文字起こし、要約、チャットセッション、チャットメッセージの情報
+    """
+    # 議事録の存在確認とアクセス権限チェック
+    minutes = get_minutes(db, minutes_id)
+    if not minutes:
+        raise ValueError("議事録が見つかりません")
+    if str(minutes.user_id) != str(user_id):
+        raise ValueError("この議事録へのアクセス権限がありません")
+    
+    # 動画情報を取得
+    video = get_video_by_minutes_id(db, minutes_id)
+    if not video:
+        raise ValueError("動画情報が見つかりません")
+    
+    # 文字起こし情報を取得
+    transcript = get_transcript_by_video_id(db, video.id)
+    if not transcript:
+        raise ValueError("文字起こし情報が見つかりません")
+    
+    # 要約情報を取得
+    summary = get_summary_by_transcript_id(db, transcript.id)
+    
+    # チャットセッションを取得
+    chat_session = get_chat_session_by_minutes_and_transcript(db, minutes_id, transcript.id)
+    
+    # チャットメッセージを取得（作成日時の昇順）
+    messages = []
+    if chat_session:
+        messages = db.query(models.ChatMessage).filter(
+            models.ChatMessage.session_id == chat_session.id
+        ).order_by(models.ChatMessage.created_at.asc()).all()
+    
+    return video, transcript, summary, chat_session, messages
