@@ -298,3 +298,53 @@ def get_upload_result(
             status_code=500,
             detail=error_message
         )
+
+@router.get("/api/get_all_minutes", response_model=schemas.MinutesListResponse)
+async def get_all_minutes(
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    """
+    ユーザーが作成した全ての議事録一覧を取得する
+    
+    Args:
+        user_id (str): 認証されたユーザーID
+        db (Session): データベースセッション
+        
+    Returns:
+        MinutesListResponse: 議事録一覧（各議事録に紐づく画像URLを含む）
+    """
+    try:
+        # 議事録一覧を取得
+        results = crud.get_all_minutes_by_user_id(db, user_id)
+        
+        # レスポンス用のデータを整形
+        minutes_list = []
+        
+        for minutes, video_image_url in results:
+            # 画像URLをSAS URLに変換
+            image_url = None
+            if video_image_url:
+                try:
+                    image_url = storage.generate_sas_url(video_image_url)
+                except Exception as e:
+                    logger.error(f"画像URLのSAS URL生成中にエラーが発生: {str(e)}")
+            
+            minutes_list.append(schemas.MinutesListItem(
+                minutes_id=minutes.id,
+                title=minutes.title,
+                image_url=image_url,
+                created_at=minutes.created_at
+            ))
+        
+        return schemas.MinutesListResponse(
+            minutes=minutes_list
+        )
+        
+    except Exception as e:
+        error_message = f"議事録一覧の取得中にエラーが発生しました: {str(e)}"
+        logger.error(error_message)
+        raise HTTPException(
+            status_code=500,
+            detail=error_message
+        )

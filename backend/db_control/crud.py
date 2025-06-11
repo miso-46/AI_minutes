@@ -6,6 +6,7 @@ import uuid
 import os
 from datetime import datetime
 import logging
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -149,7 +150,7 @@ def get_summary_by_transcript_id(db: Session, transcript_id: str):
 
 def create_summary(db: Session, transcript_id: str, content: str):
     """
-    サマリーを作成
+    サマリーを作成し、文字起こしのis_summariedフラグを更新する
     """
     try:
         # 既存のサマリーを確認
@@ -157,6 +158,14 @@ def create_summary(db: Session, transcript_id: str, content: str):
         if existing_summary:
             logger.info(f"既存のサマリーが見つかりました: summary_id={existing_summary.id}")
             return existing_summary
+
+        # 文字起こしデータを取得してis_summariedフラグを更新
+        transcript = get_transcript_by_id(db, transcript_id)
+        if not transcript:
+            logger.error(f"文字起こしデータが見つかりません: transcript_id={transcript_id}")
+            raise ValueError(f"文字起こしデータが見つかりません: transcript_id={transcript_id}")
+        
+        transcript.is_summaried = True
 
         # 新しいサマリーを作成
         summary = models.Summary(
@@ -166,7 +175,7 @@ def create_summary(db: Session, transcript_id: str, content: str):
         db.add(summary)
         db.commit()
         db.refresh(summary)
-        logger.info(f"新しいサマリーを作成しました: summary_id={summary.id}")
+        logger.info(f"新しいサマリーを作成し、is_summariedフラグを更新しました: summary_id={summary.id}")
         return summary
     except IntegrityError as e:
         db.rollback()
@@ -294,3 +303,30 @@ def update_summary(db: Session, transcript_id: int, content: str) -> models.Summ
         db.commit()
         db.refresh(summary)
     return summary
+
+def get_all_minutes_by_user_id(db: Session, user_id: str):
+    """
+    ユーザーIDに紐づく全ての議事録を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        user_id (str): ユーザーID
+        
+    Returns:
+        List[Tuple[Minutes, str]]: 議事録とサムネイル画像URLのタプルのリスト
+    """
+    # 議事録と動画を結合して取得
+    results = db.query(
+        models.Minutes,
+        models.Video.image_url
+    ).outerjoin(
+        models.Video,
+        models.Minutes.id == models.Video.minutes_id
+    ).filter(
+        models.Minutes.user_id == user_id,
+        models.Minutes.is_deleted == False
+    ).order_by(
+        models.Minutes.created_at.desc()
+    ).all()
+    
+    return results
