@@ -6,6 +6,7 @@ import uuid
 import os
 from datetime import datetime
 import logging
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -302,3 +303,30 @@ def update_summary(db: Session, transcript_id: int, content: str) -> models.Summ
         db.commit()
         db.refresh(summary)
     return summary
+
+def get_all_minutes_by_user_id(db: Session, user_id: str):
+    """
+    ユーザーIDに紐づく全ての議事録を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        user_id (str): ユーザーID
+        
+    Returns:
+        List[Tuple[Minutes, str]]: 議事録とサムネイル画像URLのタプルのリスト
+    """
+    # 議事録と動画を結合して取得
+    results = db.query(
+        models.Minutes,
+        models.Video.image_url
+    ).outerjoin(
+        models.Video,
+        models.Minutes.id == models.Video.minutes_id
+    ).filter(
+        models.Minutes.user_id == user_id,
+        models.Minutes.is_deleted == False
+    ).order_by(
+        models.Minutes.created_at.desc()
+    ).all()
+    
+    return results
