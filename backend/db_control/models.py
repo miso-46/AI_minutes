@@ -12,7 +12,7 @@ Base = declarative_base()
 class Minutes(Base):
     __tablename__ = "minutes"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(String, nullable=False)  # Supabaseのauth.users.id（uuid）
     title = Column(String, nullable=False)
     is_deleted = Column(Boolean, default=False)
@@ -25,8 +25,8 @@ class Minutes(Base):
 class Video(Base):
     __tablename__ = "video"
 
-    id = Column(String, primary_key=True)
-    minutes_id = Column(String, ForeignKey("minutes.id"), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    minutes_id = Column(Integer, ForeignKey("minutes.id"), nullable=False)
     video_url = Column(String, nullable=False)
     image_url = Column(String)
     status = Column(String, nullable=False)
@@ -41,10 +41,11 @@ class Video(Base):
 class Transcript(Base):
     __tablename__ = "transcript"
 
-    id = Column(String, primary_key=True)
-    video_id = Column(String, ForeignKey("video.id"), nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    video_id = Column(Integer, ForeignKey("video.id"), nullable=False)
     content = Column(Text, nullable=False)
     is_embedded = Column(Boolean, default=False, nullable=False)
+    is_summaried = Column(Boolean, default=False, nullable=False)  # 要約が生成されたかどうかのフラグ
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     video = relationship("Video", back_populates="transcript", uselist=False)
@@ -56,7 +57,7 @@ class Transcript(Base):
 class TranscriptChunk(Base):
     __tablename__ = "transcript_chunk"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     transcript_id = Column(Integer, ForeignKey("transcript.id"), nullable=False)
     chunk_index = Column(Integer, nullable=False)
     content = Column(String, nullable=False)
@@ -69,7 +70,7 @@ class TranscriptChunk(Base):
 class VectorEmbedding(Base):
     __tablename__ = "vector_embedding"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     chunk_id = Column(Integer, ForeignKey("transcript_chunk.id"), nullable=False)
     embedding = Column(String)  # SQLAlchemyではfloat配列が扱いづらいため、一旦Stringで保持
     created_at = Column(DateTime, default=func.now())
@@ -80,8 +81,8 @@ class VectorEmbedding(Base):
 class Summary(Base):
     __tablename__ = "summary"
 
-    id = Column(Integer, primary_key=True, index=True)
-    transcript_id = Column(String, ForeignKey("transcript.id"), unique=True, nullable=False)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    transcript_id = Column(Integer, ForeignKey("transcript.id"), unique=True, nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
@@ -91,7 +92,7 @@ class Summary(Base):
 class ChatSession(Base):
     __tablename__ = "chat_session"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     minutes_id = Column(Integer, ForeignKey("minutes.id"), nullable=False)
     transcript_id = Column(Integer, ForeignKey("transcript.id"), nullable=False)
     started_at = Column(DateTime, default=func.now())
@@ -109,7 +110,7 @@ class ChatSession(Base):
 class ChatMessage(Base):
     __tablename__ = "chat_message"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     session_id = Column(Integer, ForeignKey("chat_session.id"), nullable=False)
     role = Column(String, nullable=False)  # user or assistant
     message = Column(String, nullable=False)
@@ -122,7 +123,7 @@ class ChatMessage(Base):
 class Reference(Base):
     __tablename__ = "reference"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     chat_message_id = Column(Integer, ForeignKey("chat_message.id"), nullable=False)
     transcript_chunk_id = Column(Integer, ForeignKey("transcript_chunk.id"), nullable=False)
     rank = Column(Integer, nullable=False)
