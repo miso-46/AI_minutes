@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
-import uuid
 import os
 from datetime import datetime
 import logging
@@ -211,7 +210,7 @@ def get_video_by_minutes_id(db: Session, minutes_id: int) -> models.Video:
     """
     return db.query(models.Video).filter(models.Video.minutes_id == minutes_id).first()
 
-def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: str, transcript_id: str):
+def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: int, transcript_id: int):
     """
     議事録IDと文字起こしIDからチャットセッションを取得
     """
@@ -220,7 +219,7 @@ def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: str, tra
         models.ChatSession.transcript_id == transcript_id
     ).first()
 
-def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
+def create_chat_session(db: Session, minutes_id: int, transcript_id: int):
     """
     チャットセッションを作成
     """
@@ -233,7 +232,6 @@ def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
 
         # 新しいセッションを作成
         chat_session = models.ChatSession(
-            id=str(uuid.uuid4()),
             minutes_id=minutes_id,
             transcript_id=transcript_id
         )
@@ -251,22 +249,21 @@ def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
         logger.error(f"チャットセッションの作成中にエラーが発生しました: {str(e)}")
         raise
 
-def get_chat_session(db: Session, session_id: str):
+def get_chat_session(db: Session, session_id: int):
     """
     チャットセッションを取得
     """
     return db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
 
-def create_chat_message(db: Session, chat_session_id: str, role: str, content: str):
+def create_chat_message(db: Session, session_id: int, role: str, content: str):
     """
     チャットメッセージを作成
     """
     try:
         chat_message = models.ChatMessage(
-            id=str(uuid.uuid4()),
-            chat_session_id=chat_session_id,
+            session_id=session_id,
             role=role,
-            content=content
+            message=content
         )
         db.add(chat_message)
         db.commit()
@@ -277,12 +274,12 @@ def create_chat_message(db: Session, chat_session_id: str, role: str, content: s
         logger.error(f"チャットメッセージの作成中にエラーが発生しました: {str(e)}")
         raise
 
-def get_chat_messages(db: Session, chat_session_id: str, skip: int = 0, limit: int = 100):
+def get_chat_messages(db: Session, session_id: int, skip: int = 0, limit: int = 100):
     """
     チャットメッセージを取得
     """
     return db.query(models.ChatMessage).filter(
-        models.ChatMessage.chat_session_id == chat_session_id
+        models.ChatMessage.session_id == session_id
     ).order_by(models.ChatMessage.created_at).offset(skip).limit(limit).all()
 
 def update_summary(db: Session, transcript_id: int, content: str) -> models.Summary:

@@ -109,7 +109,7 @@ class ChatStartRequest(BaseModel):
 
 class ChatStartResponse(BaseModel):
     is_embedded: bool
-    session_id: Optional[str] = None
+    session_id: Optional[int] = None
 
 class MinutesListItem(BaseModel):
     minutes_id: int

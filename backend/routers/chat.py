@@ -80,12 +80,12 @@ async def start_chat(
                 
                 if existing_session:
                     # 既存のセッションIDを返す
-                    session_id = str(existing_session.id)
+                    session_id = existing_session.id
                     logger.info(f"既存のチャットセッションを使用: session_id={session_id}")
                 else:
                     # 新しいチャットセッションを作成
                     chat_session = crud.create_chat_session(db, request.minutes_id, transcript.id)
-                    session_id = str(chat_session.id)
+                    session_id = chat_session.id
                     logger.info(f"新しいチャットセッションを作成: session_id={session_id}")
             except IntegrityError as e:
                 logger.error(f"チャットセッションの作成中に整合性エラーが発生: {str(e)}")
