@@ -53,7 +53,7 @@ export const UploadArea: React.FC = () => {
       const data = await res.json();
       if (data.status === 'queued') {
         const id = data.minutes_id
-        router.push('/id/video');
+        router.push(`/video/${id}`);
       } else {
         alert('アップロードに失敗しました');
       }
