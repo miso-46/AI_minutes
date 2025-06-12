@@ -364,12 +364,12 @@ def get_minutes_detail(db: Session, minutes_id: int, user_id: str):
     # チャットセッションを取得
     chat_session = get_chat_session_by_minutes_and_transcript(db, minutes_id, transcript.id)
     
-    # チャットメッセージを取得（message_idの降順）
+    # チャットメッセージを取得（作成日時の昇順）
     messages = []
     if chat_session:
         messages = db.query(models.ChatMessage).filter(
             models.ChatMessage.session_id == chat_session.id
-        ).order_by(models.ChatMessage.id.desc()).all()
+        ).order_by(models.ChatMessage.created_at.asc()).all()
     
     return video, transcript, summary, chat_session, messages
 
