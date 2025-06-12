@@ -364,11 +364,106 @@ def get_minutes_detail(db: Session, minutes_id: int, user_id: str):
     # チャットセッションを取得
     chat_session = get_chat_session_by_minutes_and_transcript(db, minutes_id, transcript.id)
     
-    # チャットメッセージを取得（作成日時の昇順）
+    # チャットメッセージを取得（message_idの降順）
     messages = []
     if chat_session:
         messages = db.query(models.ChatMessage).filter(
             models.ChatMessage.session_id == chat_session.id
-        ).order_by(models.ChatMessage.created_at.asc()).all()
+        ).order_by(models.ChatMessage.id.desc()).all()
     
     return video, transcript, summary, chat_session, messages
+
+def get_transcript_chunks_with_embeddings(db: Session, transcript_id: int):
+    """
+    文字起こしIDから、チャンクとベクトル埋め込みを取得する
+    
+    Args:
+        db (Session): データベースセッション
+        transcript_id (int): 文字起こしID
+        
+    Returns:
+        List[Tuple[TranscriptChunk, VectorEmbedding]]: チャンクとベクトル埋め込みのタプルのリスト
+    """
+    return db.query(
+        models.TranscriptChunk,
+        models.VectorEmbedding
+    ).join(
+        models.VectorEmbedding,
+        models.TranscriptChunk.id == models.VectorEmbedding.chunk_id
+    ).filter(
+        models.TranscriptChunk.transcript_id == transcript_id
+    ).order_by(
+        models.TranscriptChunk.chunk_index
+    ).all()
+
+def create_reference(db: Session, chat_message_id: int, transcript_chunk_id: int, rank: int):
+    """
+    参照情報を作成する
+    
+    Args:
+        db (Session): データベースセッション
+        chat_message_id (int): チャットメッセージID
+        transcript_chunk_id (int): 文字起こしチャンクID
+        rank (int): 類似度順位
+        
+    Returns:
+        models.Reference: 作成された参照情報
+    """
+    try:
+        reference = models.Reference(
+            chat_message_id=chat_message_id,
+            transcript_chunk_id=transcript_chunk_id,
+            rank=rank
+        )
+        db.add(reference)
+        db.commit()
+        db.refresh(reference)
+        return reference
+    except Exception as e:
+        db.rollback()
+        logger.error(f"参照情報の作成中にエラーが発生しました: {str(e)}")
+        raise
+
+def get_references_by_message_id(db: Session, message_id: int):
+    """
+    チャットメッセージIDから参照情報を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        message_id (int): チャットメッセージID
+        
+    Returns:
+        List[Tuple[Reference, TranscriptChunk]]: 参照情報とチャンクのタプルのリスト（rank昇順）
+    """
+    return db.query(
+        models.Reference,
+        models.TranscriptChunk
+    ).join(
+        models.TranscriptChunk,
+        models.Reference.transcript_chunk_id == models.TranscriptChunk.id
+    ).filter(
+        models.Reference.chat_message_id == message_id
+    ).order_by(
+        models.Reference.rank.asc()
+    ).all()
+
+def get_chat_message_with_session(db: Session, message_id: int):
+    """
+    チャットメッセージIDからメッセージとセッション情報を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        message_id (int): チャットメッセージID
+        
+    Returns:
+        Tuple[ChatMessage, ChatSession]: チャットメッセージとセッションのタプル
+    """
+    return db.query(
+        models.ChatMessage,
+        models.ChatSession
+    ).join(
+        models.ChatSession,
+        models.ChatMessage.session_id == models.ChatSession.id
+    ).filter(
+        models.ChatMessage.id == message_id
+    ).first()

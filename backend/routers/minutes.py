@@ -396,6 +396,7 @@ async def get_minutes_detail(
         
         return schemas.MinutesDetailResponse(
             video_url=video_url,
+            transcript_id=transcript.id,
             transcript_content=transcript.content,
             summary=summary.content if summary else None,
             session_id=chat_session.id if chat_session else None,
