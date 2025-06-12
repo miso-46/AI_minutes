@@ -109,7 +109,26 @@ class ChatStartRequest(BaseModel):
 
 class ChatStartResponse(BaseModel):
     is_embedded: bool
-    session_id: Optional[str] = None
+    session_id: Optional[int] = None
+
+class ChatSendRequest(BaseModel):
+    session_id: int
+    message: str
+
+class ChatSendResponse(BaseModel):
+    message_id: int
+    role: str
+    message: str
+    created_at: datetime
+    is_referenced: bool
+
+class ReferenceItem(BaseModel):
+    chunk_id: int
+    content: str
+    rank: int
+
+class ReferenceResponse(BaseModel):
+    references: List[ReferenceItem]
 
 class MinutesListItem(BaseModel):
     minutes_id: int
@@ -128,6 +147,7 @@ class ChatMessageItem(BaseModel):
 
 class MinutesDetailResponse(BaseModel):
     video_url: str
+    transcript_id: int
     transcript_content: str
     summary: Optional[str] = None
     session_id: Optional[int] = None

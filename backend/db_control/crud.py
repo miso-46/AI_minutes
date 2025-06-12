@@ -2,7 +2,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from . import models, schemas
-import uuid
 import os
 from datetime import datetime
 import logging
@@ -211,7 +210,7 @@ def get_video_by_minutes_id(db: Session, minutes_id: int) -> models.Video:
     """
     return db.query(models.Video).filter(models.Video.minutes_id == minutes_id).first()
 
-def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: str, transcript_id: str):
+def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: int, transcript_id: int):
     """
     議事録IDと文字起こしIDからチャットセッションを取得
     """
@@ -220,7 +219,7 @@ def get_chat_session_by_minutes_and_transcript(db: Session, minutes_id: str, tra
         models.ChatSession.transcript_id == transcript_id
     ).first()
 
-def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
+def create_chat_session(db: Session, minutes_id: int, transcript_id: int):
     """
     チャットセッションを作成
     """
@@ -233,7 +232,6 @@ def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
 
         # 新しいセッションを作成
         chat_session = models.ChatSession(
-            id=str(uuid.uuid4()),
             minutes_id=minutes_id,
             transcript_id=transcript_id
         )
@@ -251,22 +249,21 @@ def create_chat_session(db: Session, minutes_id: str, transcript_id: str):
         logger.error(f"チャットセッションの作成中にエラーが発生しました: {str(e)}")
         raise
 
-def get_chat_session(db: Session, session_id: str):
+def get_chat_session(db: Session, session_id: int):
     """
     チャットセッションを取得
     """
     return db.query(models.ChatSession).filter(models.ChatSession.id == session_id).first()
 
-def create_chat_message(db: Session, chat_session_id: str, role: str, content: str):
+def create_chat_message(db: Session, session_id: int, role: str, content: str):
     """
     チャットメッセージを作成
     """
     try:
         chat_message = models.ChatMessage(
-            id=str(uuid.uuid4()),
-            chat_session_id=chat_session_id,
+            session_id=session_id,
             role=role,
-            content=content
+            message=content
         )
         db.add(chat_message)
         db.commit()
@@ -277,12 +274,12 @@ def create_chat_message(db: Session, chat_session_id: str, role: str, content: s
         logger.error(f"チャットメッセージの作成中にエラーが発生しました: {str(e)}")
         raise
 
-def get_chat_messages(db: Session, chat_session_id: str, skip: int = 0, limit: int = 100):
+def get_chat_messages(db: Session, session_id: int, skip: int = 0, limit: int = 100):
     """
     チャットメッセージを取得
     """
     return db.query(models.ChatMessage).filter(
-        models.ChatMessage.chat_session_id == chat_session_id
+        models.ChatMessage.session_id == session_id
     ).order_by(models.ChatMessage.created_at).offset(skip).limit(limit).all()
 
 def update_summary(db: Session, transcript_id: int, content: str) -> models.Summary:
@@ -375,3 +372,98 @@ def get_minutes_detail(db: Session, minutes_id: int, user_id: str):
         ).order_by(models.ChatMessage.created_at.asc()).all()
     
     return video, transcript, summary, chat_session, messages
+
+def get_transcript_chunks_with_embeddings(db: Session, transcript_id: int):
+    """
+    文字起こしIDから、チャンクとベクトル埋め込みを取得する
+    
+    Args:
+        db (Session): データベースセッション
+        transcript_id (int): 文字起こしID
+        
+    Returns:
+        List[Tuple[TranscriptChunk, VectorEmbedding]]: チャンクとベクトル埋め込みのタプルのリスト
+    """
+    return db.query(
+        models.TranscriptChunk,
+        models.VectorEmbedding
+    ).join(
+        models.VectorEmbedding,
+        models.TranscriptChunk.id == models.VectorEmbedding.chunk_id
+    ).filter(
+        models.TranscriptChunk.transcript_id == transcript_id
+    ).order_by(
+        models.TranscriptChunk.chunk_index
+    ).all()
+
+def create_reference(db: Session, chat_message_id: int, transcript_chunk_id: int, rank: int):
+    """
+    参照情報を作成する
+    
+    Args:
+        db (Session): データベースセッション
+        chat_message_id (int): チャットメッセージID
+        transcript_chunk_id (int): 文字起こしチャンクID
+        rank (int): 類似度順位
+        
+    Returns:
+        models.Reference: 作成された参照情報
+    """
+    try:
+        reference = models.Reference(
+            chat_message_id=chat_message_id,
+            transcript_chunk_id=transcript_chunk_id,
+            rank=rank
+        )
+        db.add(reference)
+        db.commit()
+        db.refresh(reference)
+        return reference
+    except Exception as e:
+        db.rollback()
+        logger.error(f"参照情報の作成中にエラーが発生しました: {str(e)}")
+        raise
+
+def get_references_by_message_id(db: Session, message_id: int):
+    """
+    チャットメッセージIDから参照情報を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        message_id (int): チャットメッセージID
+        
+    Returns:
+        List[Tuple[Reference, TranscriptChunk]]: 参照情報とチャンクのタプルのリスト（rank昇順）
+    """
+    return db.query(
+        models.Reference,
+        models.TranscriptChunk
+    ).join(
+        models.TranscriptChunk,
+        models.Reference.transcript_chunk_id == models.TranscriptChunk.id
+    ).filter(
+        models.Reference.chat_message_id == message_id
+    ).order_by(
+        models.Reference.rank.asc()
+    ).all()
+
+def get_chat_message_with_session(db: Session, message_id: int):
+    """
+    チャットメッセージIDからメッセージとセッション情報を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        message_id (int): チャットメッセージID
+        
+    Returns:
+        Tuple[ChatMessage, ChatSession]: チャットメッセージとセッションのタプル
+    """
+    return db.query(
+        models.ChatMessage,
+        models.ChatSession
+    ).join(
+        models.ChatSession,
+        models.ChatMessage.session_id == models.ChatSession.id
+    ).filter(
+        models.ChatMessage.id == message_id
+    ).first()
