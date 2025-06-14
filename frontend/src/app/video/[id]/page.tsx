@@ -64,7 +64,7 @@ export default function VideoPage() {
           <VideoSidebar resultInfo={resultInfo}/>
 
           {/* MainContent に minutesId と取得結果を渡す */}
-          <MainContent />
+          <MainContent transcript_id={resultInfo.transcript[0].transcript_id}/>
 
         </div>
       </div>

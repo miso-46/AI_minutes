@@ -1,10 +1,37 @@
 "use client";
-import React from 'react';
+import React, { useState }  from 'react';
 import { ActionButton } from './ActionButton';
+import ReactMarkdown from 'react-markdown';
 
-export const MainContent: React.FC = () => {
-  const handleSummaryClick = () => {
-    // Summary creation logic would go here
+type MainContentProps = {
+  transcript_id: string;
+};
+
+export const MainContent: React.FC<MainContentProps> = ({ transcript_id }) => {
+  const [summary, setSummary] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSummaryClick = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/summary', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transcript_id }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "要約作成に失敗しました");
+        setLoading(false);
+        return;
+      }
+      // 成功時の処理
+      setSummary(data.summary); 
+      console.log("Summary result:", data);
+      // 必要に応じて状態に保存したり、画面に表示したりしてください
+    } catch (e) {
+      alert("通信エラーが発生しました");
+    }
   };
 
   const handleChatClick = () => {
@@ -19,9 +46,15 @@ export const MainContent: React.FC = () => {
         </h2>
 
         <div className="flex gap-5 justify-center items-start px-4 py-2 max-sm:px-3 max-sm:py-2">
-          <ActionButton onClick={handleSummaryClick}>
-            要約作成
-          </ActionButton>
+          {summary ? (
+            <div className="p-4 bg-gray-100 rounded w-full">
+              <ReactMarkdown>{summary}</ReactMarkdown>
+            </div>
+          ) : (
+            <ActionButton onClick={handleSummaryClick} disabled={loading}>
+              {loading ? "作成中..." : "要約作成"}
+            </ActionButton>
+          )}  
         </div>
 
         <div className="flex flex-col items-start px-4 pt-1 pb-3 w-full h-11 max-sm:px-3 max-sm:pt-1 max-sm:pb-3 max-sm:h-auto">
