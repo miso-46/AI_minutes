@@ -3,7 +3,14 @@ import React from 'react';
 import { VideoThumbnail } from './VideoThumbnail';
 import { TranscriptionSection } from '@/components/TranscriptionSection';
 
-export const VideoSidebar: React.FC = () => {
+type ResultResponse = {
+  minutes_id: string;
+  title: string;
+  video_url: string;
+  transcript: { transcript_id: string; transcript_content: string }[];
+};
+
+export const VideoSidebar: React.FC<{ resultInfo?: ResultResponse }> = ({ resultInfo }) => {
   return (
     <aside className="flex flex-col w-80 h-full max-md:w-[280px] max-sm:w-full max-sm:h-auto overflow-hidden">
       {/* 固定ヘッダー部分 */}
@@ -15,7 +22,7 @@ export const VideoSidebar: React.FC = () => {
         <section className="flex flex-wrap gap-4 items-end px-4 py-3 w-full max-sm:p-3">
           <div className="flex flex-col flex-1 items-start min-w-40">
             <h3 className="pb-2 w-full text-base font-bold leading-6 text-neutral-900 max-sm:text-sm">
-              動画タイトル
+              {resultInfo.title}
             </h3>
           </div>
         </section>
@@ -26,7 +33,7 @@ export const VideoSidebar: React.FC = () => {
       </div>
 
       {/* スクロール可能な文字起こしセクション */}
-      <TranscriptionSection />
+      <TranscriptionSection transcript={resultInfo?.transcript} />
       
       <div className="flex items-start px-4 py-3 w-full h-16 max-sm:p-3 max-sm:h-auto flex-shrink-0" />
     </aside>
