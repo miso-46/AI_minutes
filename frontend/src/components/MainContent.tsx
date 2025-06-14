@@ -5,6 +5,7 @@ import ReactMarkdown from 'react-markdown';
 
 type MainContentProps = {
   transcript_id: string;
+  isLoading?: boolean;
 };
 
 export const MainContent: React.FC<MainContentProps> = ({ transcript_id }) => {

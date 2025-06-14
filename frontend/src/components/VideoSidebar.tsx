@@ -22,13 +22,22 @@ export const VideoSidebar: React.FC<{ resultInfo?: ResultResponse }> = ({ result
         <section className="flex flex-wrap gap-4 items-end px-4 py-3 w-full max-sm:p-3">
           <div className="flex flex-col flex-1 items-start min-w-40">
             <h3 className="pb-2 w-full text-base font-bold leading-6 text-neutral-900 max-sm:text-sm">
-              {resultInfo.title}
+              {resultInfo?.title}
             </h3>
+            {resultInfo?.video_url && (
+              <video
+                src={resultInfo?.video_url}
+                controls
+                style={{ width: '100%', maxHeight: 240, marginTop: 8 }}
+              >
+                お使いのブラウザは video タグをサポートしていません。
+              </video>
+            )}
           </div>
         </section>
 
         {/* Video Thumbnail Section */}
-        <VideoThumbnail />
+        {/* <VideoThumbnail /> */}
 
       </div>
 

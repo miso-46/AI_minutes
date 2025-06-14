@@ -1,6 +1,6 @@
 'use client';
 
-import React, {useEffect} from 'react';
+import React, {useEffect, useState} from 'react';
 import useSWR from 'swr';
 import { Header } from '@/components/Header';
 import { VideoSidebar } from '@/components/VideoSidebar';
@@ -37,11 +37,10 @@ export default function VideoPage() {
   });
 
   /* 2) 完了したら結果を 1 度だけ取得 */
-  const { data: resultInfo, error: resultErr } = useSWR<ResultResponse>(
+  const { data: resultInfo, error: resultErr, isLoading } = useSWR<ResultResponse>(
     statusInfo?.status === 'completed' ? `/api/uploadVideo/result/${id}` : null,
     fetcher,
   );
-
   const footerMsg = statusErr
     ? 'ステータス取得に失敗しました'
     : statusInfo?.status === 'failed'
@@ -55,6 +54,8 @@ export default function VideoPage() {
     console.log("resultInfo: ",resultInfo);
   }, [resultInfo]);
 
+  const transcript_id = resultInfo?.transcript?.[0]?.transcript_id ?? '';
+
   return (
     <div className="flex flex-col w-full bg-white h-screen overflow-hidden">
       <div className="flex flex-col w-full bg-slate-50 h-full overflow-hidden">
@@ -64,7 +65,7 @@ export default function VideoPage() {
           <VideoSidebar resultInfo={resultInfo}/>
 
           {/* MainContent に minutesId と取得結果を渡す */}
-          <MainContent transcript_id={resultInfo.transcript[0].transcript_id}/>
+          <MainContent transcript_id={transcript_id} isLoading={isLoading} />
 
         </div>
       </div>
