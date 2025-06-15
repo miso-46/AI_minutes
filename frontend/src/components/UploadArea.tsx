@@ -1,7 +1,6 @@
 "use client";
 import React, { useRef, useState } from 'react';
 import { UploadIcon } from './UploadIcon';
-import { SmallUploadIcon } from './SmallUploadIcon';
 import { useRouter } from 'next/navigation';
 
 export const UploadArea: React.FC = () => {
@@ -70,11 +69,6 @@ export const UploadArea: React.FC = () => {
           <div>
             <UploadIcon className="w-[74px] h-[74px] mb-[20px] max-sm:w-[60px] max-sm:h-[60px]" />
           </div>
-          {!uploadedFile && (
-            <div>
-              <SmallUploadIcon className="w-[24px] h-[24px] mb-[20px] max-sm:w-[20px] max-sm:h-[20px]" />
-            </div>
-          )}
         </div>
         {!uploadedFile ? (
           <h2 className="px-4 py-5 text-2xl font-bold leading-7 text-center text-neutral-900 max-sm:px-3 max-sm:py-4 max-sm:w-full max-sm:text-lg max-sm:leading-6">
