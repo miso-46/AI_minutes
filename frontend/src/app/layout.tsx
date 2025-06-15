@@ -1,5 +1,6 @@
 import '@/app/globals.css'; 
 import { MinutesProvider } from "@/contexts/MinutesContext";
+import { HistoryProvider } from "@/contexts/HistoryContext";
 
 export const metadata = {
   title: 'Video Insights',
@@ -14,9 +15,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-      <MinutesProvider>
-        {children}
-      </MinutesProvider>
+      <HistoryProvider>
+        <MinutesProvider>
+          {children}
+        </MinutesProvider>
+      </HistoryProvider>
       </body>
     </html>
   )

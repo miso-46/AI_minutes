@@ -1,24 +1,54 @@
 "use client";
 import * as React from "react";
+import { useMinutes } from "@/contexts/MinutesContext";
 
 interface VideoCardProps {
+  id: string | number;
   title: string;
   date: string;
   className?: string;
 }
 
-export function VideoCard({ title, date, className = "" }: VideoCardProps) {
+export function VideoCard({ id, title, date, className = "" }: VideoCardProps) {
+  const router = require("next/navigation").useRouter();
+  const { setMinutes, resetMinutes } = useMinutes();
+  const handleClick = async() => {
+    resetMinutes();
+    // APIリクエスト
+    const res = await fetch(`/api/history/getMinutes/${id}`);
+    if (res.ok) {
+      const data = await res.json();
+      console.log("VideoCard: ", data)
+      setMinutes(prev => ({
+        ...prev,
+        video_url: data.video_url,
+        transcript_id: data.transcript_id,
+        is_transcripted: !!data.transcript_id,
+        transcription: data.transcript_content, // ← ここはMinutesContextの型に合わせて
+        summary: data.summary,
+        is_summarized: !!data.summary,
+        session_id: data.session_id,
+        messages: data.messages,
+        is_chatting: !!data.session_id
+      }));
+    }
+    router.push(`/video/${id}`);
+  };
+
   return (
-    <article className={`flex flex-col items-center ${className}`}>
-      <div className="rounded-xl bg-slate-300 h-[156px] w-[238px] max-md:h-[130px] max-md:w-[200px] max-sm:h-[180px] max-sm:w-[280px]" />
-      <div className="flex flex-col gap-0.5 justify-center items-start px-1 py-1.5">
-        <h3 className="text-2xl font-bold leading-7 text-neutral-900 w-[238px] max-md:text-xl max-md:w-[200px] max-sm:text-lg max-sm:w-[280px]">
+    <article className={`flex flex-col items-center gap-2 ${className}`}>
+      <button
+        type="button"
+        onClick={handleClick}
+        className="aspect-[16/10] w-full max-w-[260px] rounded-xl bg-slate-300 flex flex-col justify-center items-center p-2 focus:outline-none"
+      >
+        <span className="text-lg md:text-xl font-bold text-neutral-900 truncate w-full text-center">
           {title}
-        </h3>
-        <time className="text-base leading-7 text-center text-black max-md:text-sm max-sm:text-sm">
+        </span>
+        <span className="text-sm md:text-base text-black">
           {date}
-        </time>
-      </div>
+        </span>
+      </button>
     </article>
   );
 }
