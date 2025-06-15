@@ -12,6 +12,7 @@ export const MainContent: React.FC = () => {
 
   const handleSummaryClick = async () => {
     setLoading(true);
+    console.log("MainContent : ", minutes);
     try {
       const res = await fetch('/api/summary', {
         method: 'POST',

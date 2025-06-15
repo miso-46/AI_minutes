@@ -2,12 +2,14 @@
 import React, { useRef, useState } from 'react';
 import { UploadIcon } from './UploadIcon';
 import { useRouter } from 'next/navigation';
+import { useMinutes } from '@/contexts/MinutesContext';
 
 export const UploadArea: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const router = useRouter();
+  const {resetMinutes} = useMinutes();
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
@@ -49,6 +51,7 @@ export const UploadArea: React.FC = () => {
     });
 
     if (res.ok) {
+      resetMinutes();
       const data = await res.json();
       if (data.status === 'queued') {
         const id = data.minutes_id
