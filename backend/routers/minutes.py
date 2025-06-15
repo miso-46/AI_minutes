@@ -313,7 +313,7 @@ async def get_all_minutes(
     db: Session = Depends(get_db)
 ):
     """
-    ユーザーが作成した全ての議事録一覧を取得する
+    ユーザーが作成完了した議事録一覧を取得する
     
     Args:
         user_id (str): 認証されたユーザーID
