@@ -27,6 +27,7 @@ export default function VideoPage() {
   const { id } = useParams() as { id: string };
   const { setMinutes } = useMinutes();
   const { minutes } = useMinutes();
+  console.log("VideoPage minutes: ",minutes)
   /* 1) ステータス監視 3 秒おき。completed / failed で自動停止 */
   const {
     data: statusInfo,
@@ -58,7 +59,7 @@ export default function VideoPage() {
     : '取得中...';
 
   useEffect(() => {
-    if (resultInfo) {
+    if (resultInfo && !minutes.is_transcripted) {
       setMinutes({
         minutes_id: resultInfo.minutes_id,
         title: resultInfo.title,
@@ -73,6 +74,7 @@ export default function VideoPage() {
         is_chatting: false,
         messages: [],
       });
+      console.log("VideoPage useEffect")
     }
   }, [resultInfo, setMinutes]);
 

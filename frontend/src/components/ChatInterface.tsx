@@ -52,7 +52,7 @@ export function ChatInterface() {
     <div className="flex flex-col h-full w-full">
       {/* メッセージリストだけスクロール */}
       <div className="flex flex-col w-full overflow-y-auto max-h-[560px]">
-        {minutes.messages.map((msg, idx) => (
+        {minutes.messages?.map((msg, idx) => (
           <div
             key={msg.message_id ?? idx}
             className={`flex gap-3 items-end p-4 w-full text-base max-md:max-w-full ${
