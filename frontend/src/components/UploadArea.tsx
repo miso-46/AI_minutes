@@ -2,10 +2,13 @@
 import React, { useRef, useState } from 'react';
 import { UploadIcon } from './UploadIcon';
 import { SmallUploadIcon } from './SmallUploadIcon';
+import { useRouter } from 'next/navigation';
 
 export const UploadArea: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const router = useRouter();
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
@@ -34,9 +37,30 @@ export const UploadArea: React.FC = () => {
     setUploadedFile(file);
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!uploadedFile) return;
-    alert(`アップロード処理: ${uploadedFile.name}`);
+    setUploading(true);
+
+    const formData = new FormData();
+    formData.append('file', uploadedFile);
+
+    const res = await fetch('/api/uploadVideo', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.status === 'queued') {
+        const id = data.minutes_id
+        router.push(`/video/${id}`);
+      } else {
+        alert('アップロードに失敗しました');
+      }
+    } else {
+      alert('アップロードに失敗しました');
+    }
+    setUploading(false);
   };
 
   return (

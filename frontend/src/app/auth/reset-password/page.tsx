@@ -98,7 +98,7 @@ export default function ResetPasswordPage() {
   }
 
   const handleBackToLogin = () => {
-    router.push('/login')
+    router.push('/auth/login')
   }
 
   // 無効なセッションの場合
