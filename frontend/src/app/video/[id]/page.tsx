@@ -59,7 +59,7 @@ export default function VideoPage() {
     : '取得中...';
 
   useEffect(() => {
-    if (resultInfo && !minutes.is_transcripted) {
+    if (resultInfo && !minutes.transcript_id) {
       setMinutes({
         minutes_id: resultInfo.minutes_id,
         title: resultInfo.title,
@@ -78,8 +78,30 @@ export default function VideoPage() {
     }
   }, [resultInfo, setMinutes]);
 
-  const transcript_id = resultInfo?.transcript?.[0]?.transcript_id ?? '';
-  const minutes_id = resultInfo?.minutes_id ?? '';
+  useEffect(() => {
+    const fetchMinutes = async () => {
+      const res = await fetch(`/api/history/getMinutes/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setMinutes(prev => ({
+          ...prev,
+          minutes_id: Number(id),
+          title: data.title,
+          video_url: data.video_url,
+          transcript_id: data.transcript_id,
+          is_transcripted: !!data.transcript_id,
+          transcription: data.transcript_content,
+          summary: data.summary,
+          is_summarized: !!data.summary,
+          session_id: data.session_id,
+          messages: data.messages,
+          is_chatting: !!data.session_id,
+          is_embedded: false, // 必要に応じて
+        }));
+      }
+    };
+    fetchMinutes();
+  }, [id, setMinutes]);
 
   return (
 
