@@ -5,7 +5,7 @@ import { VideoGrid } from "@/components/VideoGrid";
 import { requireAuth } from '@/lib/auth'
 
 export default async function Home() {
-  const { user } = await requireAuth()
+
 
   return (
     <div className="flex flex-col items-start w-full bg-white min-h-screen">
