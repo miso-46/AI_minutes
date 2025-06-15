@@ -1,4 +1,5 @@
 import '@/app/globals.css'; 
+import { MinutesProvider } from "@/contexts/MinutesContext";
 
 export const metadata = {
   title: 'Video Insights',
@@ -12,7 +13,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+      <MinutesProvider>
+        {children}
+      </MinutesProvider>
+      </body>
     </html>
   )
 }

@@ -1,9 +1,6 @@
 import React from 'react';
 
-type Transcript = { transcript_id: string; transcript_content: string };
-type Props = {
-  transcript?: Transcript[];
-};
+type Props = {transcript?: string;};
 
 export const TranscriptionSection: React.FC<Props> = ({ transcript }) => {
   return (
@@ -12,10 +9,8 @@ export const TranscriptionSection: React.FC<Props> = ({ transcript }) => {
       文字起こし
     </h3>
     <article className="flex-1 px-4 pt-1 pb-3 w-full text-base leading-6 text-neutral-900 max-sm:px-3 max-sm:pt-1 max-sm:pb-3 max-sm:text-sm overflow-y-auto min-h-0 bg-white rounded border border-gray-200">
-      {transcript && transcript.length > 0 ? (
-          transcript.map((t) => (
-            <div key={t.transcript_id}>{t.transcript_content}</div>
-          ))
+      {transcript ? (
+            <div>{transcript}</div>          
         ) : (
           <div>文字起こしデータがありません</div>
         )}
