@@ -303,7 +303,7 @@ def update_summary(db: Session, transcript_id: int, content: str) -> models.Summ
 
 def get_all_minutes_by_user_id(db: Session, user_id: str):
     """
-    ユーザーIDに紐づく全ての議事録を取得する
+    ユーザーIDに紐づく全ての議事録を取得する（削除されていない、かつ完了した動画のみ）
     
     Args:
         db (Session): データベースセッション
@@ -312,21 +312,19 @@ def get_all_minutes_by_user_id(db: Session, user_id: str):
     Returns:
         List[Tuple[Minutes, str]]: 議事録とサムネイル画像URLのタプルのリスト
     """
-    # 議事録と動画を結合して取得
-    results = db.query(
+    return db.query(
         models.Minutes,
         models.Video.image_url
-    ).outerjoin(
+    ).join(
         models.Video,
         models.Minutes.id == models.Video.minutes_id
     ).filter(
         models.Minutes.user_id == user_id,
-        models.Minutes.is_deleted == False
+        models.Minutes.is_deleted == False,
+        models.Video.status == "completed"
     ).order_by(
         models.Minutes.created_at.desc()
     ).all()
-    
-    return results
 
 def get_minutes_detail(db: Session, minutes_id: int, user_id: str):
     """
