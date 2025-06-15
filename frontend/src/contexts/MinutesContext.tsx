@@ -64,19 +64,16 @@ const MinutesContext = createContext<MinutesContextType | undefined>(undefined);
 // Provider
 export const MinutesProvider = ({ children }: { children: ReactNode }) => {
     // localStorageから初期値を取得
-    const [minutes, setMinutes] = useState<Minutes>(() => {
-        if (typeof window !== "undefined") {
-            const stored = localStorage.getItem("minutes");
-            return stored ? JSON.parse(stored) : initialMinutes;
+    const [minutes, setMinutes] = useState<Minutes>(initialMinutes);
+
+    useEffect(() => {
+      if (typeof window !== "undefined") {
+        const stored = localStorage.getItem("minutes");
+        if (stored) {
+          setMinutes(JSON.parse(stored));
         }
-        return initialMinutes;
-        });
-      // minutesが変わるたびにlocalStorageに保存
-  useEffect(() => {
-    if (minutes) {
-      localStorage.setItem("minutes", JSON.stringify(minutes));
-    }
-  }, [minutes]);
+      }
+    }, []);
   // 初期化関数
   const resetMinutes = () => setMinutes(initialMinutes);
   // 個別setter
@@ -102,7 +99,9 @@ export const MinutesProvider = ({ children }: { children: ReactNode }) => {
     setMinutes((prev) => prev ? { ...prev, messages: msgs } : prev);
   const addMessage = (msg: ChatMessage) =>
     setMinutes((prev) =>
-      prev ? { ...prev, messages: [...prev.messages, msg] } : prev
+      prev
+        ? { ...prev, messages: [...(prev.messages || []), msg] }
+        : prev
     );
 
     return (

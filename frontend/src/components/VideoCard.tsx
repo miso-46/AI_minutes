@@ -19,8 +19,12 @@ export function VideoCard({ id, title, date, className = "" }: VideoCardProps) {
     if (res.ok) {
       const data = await res.json();
       console.log("VideoCard: ", data)
+      console.log("transcript_id: ",data.transcript_id, !!data.transcript_id)
+      console.log("summary: ",data.summary, !!data.summary)
+      console.log("session_id: ",data.session_id, !!data.session_id)
       setMinutes(prev => ({
         ...prev,
+        minutes_id: Number(id),
         video_url: data.video_url,
         transcript_id: data.transcript_id,
         is_transcripted: !!data.transcript_id,
