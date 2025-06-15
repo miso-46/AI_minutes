@@ -61,9 +61,13 @@
 - PostgreSQL
 
 ###リソースのセットアップ
-1. Supabaseでプロジェクト作成
-    - https://supabase.com/
-2. Azure Blob Storageでリソース立ち上げ
+1. Supabase
+    - プロジェクト作成
+        - 公式サイト：https://supabase.com/
+        - 無料プラン
+    - テーブル作成
+        - ER図：https://dbdiagram.io/d/app_minutes_step3_homework-6839a559bd74709cb74a4557
+3. Azure Blob Storage
     - BlobStorage内にvideoコンテナを作成する
 
 ### バックエンドのセットアップ
