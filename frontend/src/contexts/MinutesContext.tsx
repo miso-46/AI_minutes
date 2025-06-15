@@ -66,14 +66,14 @@ export const MinutesProvider = ({ children }: { children: ReactNode }) => {
     // localStorageから初期値を取得
     const [minutes, setMinutes] = useState<Minutes>(initialMinutes);
 
-    useEffect(() => {
-      if (typeof window !== "undefined") {
-        const stored = localStorage.getItem("minutes");
-        if (stored) {
-          setMinutes(JSON.parse(stored));
-        }
-      }
-    }, []);
+    // useEffect(() => {
+    //   if (typeof window !== "undefined") {
+    //     const stored = localStorage.getItem("minutes");
+    //     if (stored) {
+    //       setMinutes(JSON.parse(stored));
+    //     }
+    //   }
+    // }, []);
   // 初期化関数
   const resetMinutes = () => setMinutes(initialMinutes);
   // 個別setter

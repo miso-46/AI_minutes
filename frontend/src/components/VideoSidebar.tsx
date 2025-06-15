@@ -6,7 +6,7 @@ import { useMinutes } from "@/contexts/MinutesContext";
 export const VideoSidebar: React.FC = () => {
   const { minutes } = useMinutes();
   return (
-    <aside className="flex flex-col w-80 h-full max-md:w-[280px] max-sm:w-full max-sm:h-auto overflow-hidden">
+    <aside className="flex flex-col w-[480px] h-full max-md:w-[480px] max-sm:w-full max-sm:h-auto overflow-hidden">
       {/* 固定ヘッダー部分 */}
       <div className="flex-shrink-0">
         <h2 className="px-4 pt-5 pb-2 w-full text-2xl font-bold leading-8 text-neutral-900 max-md:text-2xl max-sm:px-3 max-sm:pt-4 max-sm:pb-2 max-sm:text-xl">
