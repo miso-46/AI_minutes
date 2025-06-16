@@ -14,6 +14,7 @@ import json
 router = APIRouter(tags=["chat"])
 logger = logging.getLogger(__name__)
 
+
 @router.post("/api/start_chat", response_model=schemas.ChatStartResponse)
 async def start_chat(
     request: schemas.ChatStartRequest,

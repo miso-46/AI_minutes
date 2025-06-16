@@ -14,13 +14,13 @@ client = AzureOpenAI(
     azure_endpoint=os.getenv("AZURE_OPENAI_BASE_URL")
 )
 
-def validate_access_permissions(db: Session, transcript_id: str, user_id: str) -> None:
+def validate_access_permissions(db: Session, transcript_id: int, user_id: str) -> None:
     """
-    アクセス権限を検証する
+    文字起こしへのアクセス権限を検証する
     
     Args:
         db (Session): データベースセッション
-        transcript_id (str): 文字起こしID
+        transcript_id (int): 文字起こしID
         user_id (str): ユーザーID
         
     Raises:
@@ -34,14 +34,15 @@ def validate_access_permissions(db: Session, transcript_id: str, user_id: str) -
             detail="指定された文字起こしIDのデータが見つかりません"
         )
     
-    video = crud.get_video(db, transcript.video_id)
+    # 動画を取得
+    video = crud.get_video_by_id(db, transcript.video_id)
     if not video:
-        logger.error(f"動画データが見つかりません: video_id={transcript.video_id}")
         raise HTTPException(
             status_code=404,
-            detail="動画データが見つかりません"
+            detail="動画が見つかりません"
         )
     
+    # 議事録を取得
     minutes = crud.get_minutes(db, video.minutes_id)
     if not minutes:
         logger.error(f"議事録データが見つかりません: minutes_id={video.minutes_id}")

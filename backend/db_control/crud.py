@@ -5,7 +5,7 @@ from . import models, schemas
 import os
 from datetime import datetime
 import logging
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -465,3 +465,16 @@ def get_chat_message_with_session(db: Session, message_id: int):
     ).filter(
         models.ChatMessage.id == message_id
     ).first()
+
+def get_video_by_id(db: Session, video_id: int) -> Optional[models.Video]:
+    """
+    動画IDから動画を取得する
+    
+    Args:
+        db (Session): データベースセッション
+        video_id (int): 動画ID
+        
+    Returns:
+        Optional[models.Video]: 動画オブジェクト（存在しない場合はNone）
+    """
+    return db.query(models.Video).filter(models.Video.id == video_id).first()
