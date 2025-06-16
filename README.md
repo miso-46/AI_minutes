@@ -70,6 +70,13 @@
 3. Azure Blob Storage
     - BlobStorage内にvideoコンテナを作成する
 
+### 動画処理に用いるライブラリのインストール
+所要時間：10分程度
+ターミナルで実行
+```bash
+brew install ffmpeg
+```
+
 ### バックエンドのセットアップ
 1. バックエンドディレクトリに移動
 ```bash
@@ -118,12 +125,7 @@ AZURE_OPENAI_DEPLOYMENT_EMBED="embedding用AIモデルのデプロイ名"
 AZURE_OPENAI_DEPLOYMENT_WHISPER="文字起こし用AIモデルのデプロイ名"
 ```
 
-5. データベースのセットアップ
-```bash
-python db_control/init_db.py
-```
-
-6. サーバーの起動
+5. サーバーの起動
 ```bash
 uvicorn app:app --reload
 ```
