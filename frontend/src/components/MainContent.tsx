@@ -4,6 +4,7 @@ import { ActionButton } from './ActionButton';
 import ReactMarkdown from 'react-markdown';
 import { ChatInterface } from './ChatInterface';
 import { useMinutes } from "@/contexts/MinutesContext";
+import remarkGfm from 'remark-gfm';
 
 export const MainContent: React.FC = () => {
   const { minutes, setSummary, setSessionId, setIsSummarized } = useMinutes();
@@ -65,7 +66,9 @@ export const MainContent: React.FC = () => {
               <div>文字起こしデータ取得中...</div>
             ) : minutes.is_summarized ? (
               <div className="p-4 bg-gray-100 rounded w-full overflow-y-auto max-h-[320px]">
-                <ReactMarkdown>{minutes.summary}</ReactMarkdown>
+                <div className="prose w-full">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{minutes.summary}</ReactMarkdown>
+                </div>
               </div>
             ) : (
               <ActionButton onClick={handleSummaryClick} disabled={loading}>
