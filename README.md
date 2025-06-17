@@ -65,8 +65,7 @@
     - プロジェクト作成
         - 公式サイト：https://supabase.com/
         - 無料プラン
-    - テーブル作成
-        - ER図：https://dbdiagram.io/d/app_minutes_step3_homework-6839a559bd74709cb74a4557
+        - 今回のER図：https://dbdiagram.io/d/app_minutes_step3_homework-6839a559bd74709cb74a4557
 3. Azure Blob Storage
     - BlobStorage内にvideoコンテナを作成する
 
@@ -128,6 +127,11 @@ AZURE_OPENAI_DEPLOYMENT_WHISPER="文字起こし用AIモデルのデプロイ名
 5. サーバーの起動
 ```bash
 uvicorn app:app --reload
+```
+
+6. 接続先のDBにテーブル作成
+```bash
+python db_control/init_db.py
 ```
 
 ### フロントエンドのセットアップ
