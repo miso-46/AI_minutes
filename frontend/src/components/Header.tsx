@@ -7,7 +7,7 @@ export function Header() {
   return (
     <header className="flex justify-between items-center px-10 py-3 w-full border border-gray-200 max-md:px-6 max-md:py-3 max-sm:px-4 max-sm:py-3">
       <div className="flex gap-4 items-center">
-        <Link href="/" className="text-lg font-bold leading-6 text-neutral-900 max-md:text-base max-sm:text-sm hover:underline">
+        <Link href="/" className="text-lg font-bold leading-6 text-neutral-900 max-md:text-base max-sm:text-sm">
           Video Insights
         </Link>
       </div>
