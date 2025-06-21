@@ -60,14 +60,19 @@
 - Node.js 18以上
 - PostgreSQL
 
-###リソースのセットアップ
-1. Supabase
-    - プロジェクト作成
-        - 公式サイト：https://supabase.com/
-        - 無料プラン
-        - 今回のER図：https://dbdiagram.io/d/app_minutes_step3_homework-6839a559bd74709cb74a4557
-3. Azure Blob Storage
-    - BlobStorage内にvideoコンテナを作成する
+### リソースのセットアップ
+1. Supabaseでプロジェクト作成
+    - 公式サイト
+        - https://supabase.com/
+    - 選定理由
+        - 無料プランかつ、pgvector拡張ベクターデータが扱えて、Auth機能が簡単に実装できるから
+    - 今回のER図
+        - https://dbdiagram.io/d/app_minutes_step3_homework-6839a559bd74709cb74a4557
+3. Azure Blob Storage内にvideoコンテナを作成
+    - 公式サイト
+        - https://azure.microsoft.com/ja-jp/products/storage/blobs
+    - 選定利用
+        Supabase Storageは無料プランでは500MBまでだが、Azure Blob Storageは無料枠で月あたり5GBまで使えるため
 
 ### 動画処理に用いるライブラリのインストール
 所要時間：10分程度
