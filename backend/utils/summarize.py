@@ -75,7 +75,7 @@ def generate_summary_content(transcript_content: str) -> str:
         response = client.chat.completions.create(
             model=os.getenv("AZURE_OPENAI_DEPLOYMENT_CHAT", "gpt-4.1"),
             messages=[
-                {"role": "system", "content": "あなたは会議の議事録を要約する専門家です。与えられた文字起こし文章を、重要なポイントを漏らさず、簡潔にマークダウン記法で要約してください。"},
+                {"role": "system", "content": "あなたは会議の議事録を要約する専門家です。与えられた文字起こし文章を、重要なポイントを漏らさず、簡潔にマークダウン記法で要約してください。見出しには`### を使ってください。それ以上の大きな見出し # や ## は使わないでください。"},
                 {"role": "user", "content": f"以下の会議の文字起こしを要約してください：\n\n{transcript_content}"}
             ],
             temperature=0.7,
