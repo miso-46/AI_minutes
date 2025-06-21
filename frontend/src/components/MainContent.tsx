@@ -108,7 +108,7 @@ export const MainContent: React.FC = () => {
           { !minutes.is_transcripted ? (
               <div>文字起こしデータ取得中...</div>
             ) : minutes.is_summarized ? (
-              <div className="flex-1 flex p-4 bg-gray-100 rounded overflow-y-auto h-full">
+              <div className="flex-1 flex p-4 bg-gray-100 rounded overflow-y-auto h-full bg-white rounded-lg">
                 <div className="prose w-full max-w-none whitespace-normal">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{minutes.summary}</ReactMarkdown>
                 </div>

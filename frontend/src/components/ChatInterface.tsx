@@ -11,7 +11,7 @@ export function ChatInterface() {
   }, [minutes.messages]); // メッセージが変わるたびに発火
 
   return (
-    <div className="flex-1 flex flex-col h-full w-full">
+    <div className="flex-1 flex flex-col h-full w-full bg-white rounded-lg">
       {/* メッセージリストだけスクロール */}
       <div className="flex flex-col w-full overflow-y-auto">
         {minutes.messages?.map((msg, idx) => (
