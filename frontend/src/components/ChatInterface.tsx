@@ -4,10 +4,16 @@ import { useMinutes } from "@/contexts/MinutesContext";
 
 export function ChatInterface() {
   const { minutes } = useMinutes();
+  const messagesEndRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [minutes.messages]); // メッセージが変わるたびに発火
+
   return (
     <div className="flex-1 flex flex-col h-full w-full">
       {/* メッセージリストだけスクロール */}
-      <div className="flex flex-col w-full overflow-y-auto flex-1">
+      <div className="flex flex-col w-full overflow-y-auto">
         {minutes.messages?.map((msg, idx) => (
           <div
             key={msg.message_id ?? idx}
@@ -32,6 +38,7 @@ export function ChatInterface() {
             </div>
           </div>
         ))}
+        <div ref={messagesEndRef} style={{ height: 0, margin: 0, padding: 0 }} /> 
       </div>
     </div>
   );
