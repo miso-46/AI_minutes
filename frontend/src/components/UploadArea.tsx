@@ -74,9 +74,14 @@ export const UploadArea: React.FC = () => {
           </div>
         </div>
         {!uploadedFile ? (
-          <h2 className="px-4 py-5 text-2xl font-bold leading-7 text-center text-neutral-900 max-sm:px-3 max-sm:py-4 max-sm:w-full max-sm:text-lg max-sm:leading-6">
-            動画をアップロードしてください
-          </h2>
+          <div className="flex flex-col items-center">
+            <h2 className="px-4 py-5 text-2xl font-bold leading-7 text-center text-neutral-900 max-sm:px-3 max-sm:py-4 max-sm:w-full max-sm:text-lg max-sm:leading-6">
+              動画をアップロードしてください
+            </h2>
+            <p className="px-4 mb-5 text-lg text-center text-gray-500 max-sm:text-base">
+              対応形式：mp4 / mov（200MB以内）
+            </p>
+          </div>
         ) : (
           <div className="px-4 py-5 text-lg font-medium text-center text-neutral-900">
             {uploadedFile.name}
