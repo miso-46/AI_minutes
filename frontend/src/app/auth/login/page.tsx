@@ -50,9 +50,14 @@ const Auth = () => {
         setMessage(error.message);
       } else {
         setMessage('確認メールを送信しました。メールを確認してください。');
+        setEmail("");
+        setPassword("");
+        setIsLogin(true);
       }
     } catch (error) {
       setMessage('登録中にエラーが発生しました');
+      setEmail("");
+      setPassword("");
     }
   };
 
@@ -78,6 +83,7 @@ const Auth = () => {
         }
     };
 
+  
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-white px-5 font-sans">
       {/* Logo Section */}
@@ -143,7 +149,7 @@ const Auth = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ?  <Eye size={20} /> : <EyeOff size={20} /> }
                 </button>
               </div>
             </div>
@@ -182,7 +188,7 @@ const Auth = () => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600 hover:text-gray-800"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ?  <Eye size={20} /> : <EyeOff size={20} />}
                 </button>
               </div>
             </div>

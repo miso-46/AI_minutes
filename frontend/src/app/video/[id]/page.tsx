@@ -27,6 +27,7 @@ export default function VideoPage() {
   const { id } = useParams() as { id: string };
   const { setMinutes } = useMinutes();
   const { minutes } = useMinutes();
+  const [isCompleted, setIsCompleted] = useState(false)
   console.log("VideoPage minutes: ",minutes)
   /* 1) ステータス監視 3 秒おき。completed / failed で自動停止 */
   const {
@@ -59,6 +60,7 @@ export default function VideoPage() {
     : '取得中...';
 
   useEffect(() => {
+    // resultを受け取った後かつ、まだ文字起こしされていない時に実行
     if (resultInfo && !minutes.transcript_id) {
       setMinutes({
         minutes_id: resultInfo.minutes_id,
@@ -77,6 +79,13 @@ export default function VideoPage() {
       console.log("VideoPage useEffect")
     }
   }, [resultInfo, setMinutes]);
+
+  useEffect(() => {
+    if (statusInfo?.status === 'completed') {
+      console.log("status: Completed")
+      setIsCompleted(true);
+    }
+  }, [statusInfo]);
 
   useEffect(() => {
     const fetchMinutes = async () => {
@@ -100,8 +109,11 @@ export default function VideoPage() {
         }));
       }
     };
-    fetchMinutes();
-  }, [id, setMinutes]);
+    // complete済みの時に実行
+    if(isCompleted){
+      fetchMinutes();
+    }
+  }, [isCompleted, setMinutes]);
 
   return (
 
