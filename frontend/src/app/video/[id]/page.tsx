@@ -112,8 +112,11 @@ export default function VideoPage() {
         }));
       }
     };
-    fetchMinutes(); 
-  }, [id, setMinutes]);
+    // 処理中でなく、文字起こしデータもまだない場合にのみ取得
+    if (statusInfo && statusInfo.status !== 'processing' && statusInfo.status !== 'queued' && !minutes.is_transcripted) {
+      fetchMinutes(); 
+    }
+  }, [id, setMinutes, statusInfo, minutes.is_transcripted]);
 
   // エラーハンドリング
   if (statusErr) {
