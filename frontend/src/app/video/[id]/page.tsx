@@ -29,7 +29,7 @@ export default function VideoPage() {
   const { setMinutes } = useMinutes();
   const { minutes } = useMinutes();
   const [isProcessing, setIsProcessing] = useState(false);
-  
+  const [isCompleted, setIsCompleted] = useState(false);
   console.log("VideoPage minutes: ", minutes);
 
   /* 1) ステータス監視 3秒おき。completed / failed で自動停止 */
@@ -64,6 +64,7 @@ export default function VideoPage() {
         setIsProcessing(true);
       } else if (statusInfo.status === 'completed' || statusInfo.status === 'failed') {
         setIsProcessing(false);
+        setIsCompleted(true);
       }
     }
   }, [statusInfo]);
@@ -114,10 +115,10 @@ export default function VideoPage() {
       }
     };
     // 処理中でなく、文字起こしデータもまだない場合にのみ取得
-    if (statusInfo && statusInfo.status !== 'processing' && statusInfo.status !== 'queued' && !minutes.is_transcripted) {
+    if (isCompleted) {
       fetchMinutes(); 
     }
-  }, [id, setMinutes, statusInfo, minutes.is_transcripted]);
+  }, [isCompleted, setMinutes]);
 
   // エラーハンドリング
   if (statusErr) {
@@ -134,16 +135,6 @@ export default function VideoPage() {
           </div>
         </div>
       </div>
-    );
-  }
-
-  // 処理中の場合はプログレスバーを表示
-  if (isProcessing && statusInfo) {
-    return (
-      <ProgressBar 
-        progress={statusInfo.progress} 
-        status={statusInfo.status} 
-      />
     );
   }
 
@@ -171,10 +162,25 @@ export default function VideoPage() {
       <div className="flex flex-col w-full bg-slate-50 h-full overflow-hidden">
         <Header />
 
-        <div className="flex gap-1 justify-center px-6 py-5 w-full flex-1 min-h-0 max-md:px-4 max-md:py-5 max-sm:flex-col max-sm:px-3 max-sm:py-4">
-          <VideoSidebar />
-          <MainContent />
-        </div>
+         {/* 処理中の場合はプログレスバーを表示 */}
+        {!statusInfo ?
+          <></>
+        :
+        <>
+          {isProcessing ?
+              <ProgressBar 
+                progress={statusInfo.progress} 
+                status={statusInfo.status} 
+              />
+          :
+            <div className="flex gap-1 justify-center px-6 py-5 w-full flex-1 min-h-0 max-md:px-4 max-md:py-5 max-sm:flex-col max-sm:px-3 max-sm:py-4">
+              <VideoSidebar />
+              <MainContent />
+            </div>
+          }
+        </>
+      }
+
       </div>
     </div>
   );

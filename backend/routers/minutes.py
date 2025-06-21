@@ -95,7 +95,7 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
         await crud.update_video_progress(db, minutes_id, 20)
         
         # 3. 文字起こしの実行
-        transcript_content = await transcription.transcribe_video(video_url)
+        transcript_content = await transcription.transcribe_video(video_url, db, minutes_id)
         if not transcript_content:
             raise Exception("文字起こしに失敗しました")
         

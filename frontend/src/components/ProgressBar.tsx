@@ -9,7 +9,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({ progress, status }) =>
   const isFailed = status === 'failed';
 
   return (
-    <div className="fixed inset-0 bg-white flex items-center justify-center z-50">
+    <div className="h-full inset-0 bg-white flex items-center justify-center">
       <div className={`w-full max-w-md px-6 ${isFailed ? 'opacity-50' : ''}`}>
         <div className="mb-4 text-center">
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
