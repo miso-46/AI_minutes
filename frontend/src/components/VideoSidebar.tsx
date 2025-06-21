@@ -38,7 +38,7 @@ export const VideoSidebar: React.FC = () => {
       {/* スクロール可能な文字起こしセクション */}
       <TranscriptionSection transcript={minutes?.transcription} />
       
-      <div className="flex items-start px-4 py-3 w-full h-16 max-sm:p-3 max-sm:h-auto flex-shrink-0" />
+      {/* <div className="flex items-start px-4 py-3 w-full h-16 max-sm:p-3 max-sm:h-auto flex-shrink-0" /> */}
     </aside>
   );
 };

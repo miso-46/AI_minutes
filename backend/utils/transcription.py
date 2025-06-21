@@ -10,6 +10,8 @@ import shutil
 import aiohttp
 import asyncio
 from typing import List, Tuple
+from sqlalchemy.orm import Session
+from db_control import crud
 
 # ロギングの設定
 logging.basicConfig(level=logging.INFO)
@@ -106,7 +108,7 @@ async def split_video(input_path: str, output_dir: str, segment_duration: int = 
     segments = sorted([f for f in os.listdir(output_dir) if f.startswith('segment_')])
     return [os.path.join(output_dir, segment) for segment in segments]
 
-async def transcribe_video(video_url: str) -> str:
+async def transcribe_video(video_url: str, db: Session, minutes_id: int) -> str:
     """動画の文字起こしを行う関数"""
     temp_dir = None
     try:
@@ -127,10 +129,12 @@ async def transcribe_video(video_url: str) -> str:
         # 動画の長さを取得
         duration = await get_video_duration(temp_input)
         logger.info(f"動画の長さ: {duration}秒")
+        await crud.update_video_progress(db, minutes_id, 40)
         
         # 動画の圧縮
         logger.info("動画の圧縮を開始")
         await compress_video(temp_input, temp_output)
+        await crud.update_video_progress(db, minutes_id, 60)
         
         # 圧縮後のファイルサイズをチェック
         compressed_size = os.path.getsize(temp_output)
@@ -150,6 +154,7 @@ async def transcribe_video(video_url: str) -> str:
             # 圧縮後のファイルが制限を超える場合、分割して処理
             logger.info("圧縮後のファイルが制限を超えるため、分割して処理")
             segments = await split_video(temp_input, temp_dir)
+            await crud.update_video_progress(db, minutes_id, 70)
             transcriptions = []
             
             for i, segment in enumerate(segments):

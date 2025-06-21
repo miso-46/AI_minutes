@@ -108,7 +108,7 @@ export const MainContent: React.FC = () => {
           { !minutes.is_transcripted ? (
               <div>文字起こしデータ取得中...</div>
             ) : minutes.is_summarized ? (
-              <div className="flex-1 flex p-4 bg-gray-100 rounded overflow-y-auto h-full">
+              <div className="flex-1 flex p-4 bg-gray-100 rounded overflow-y-auto h-full bg-white rounded-lg">
                 <div className="prose w-full max-w-none whitespace-normal">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>{minutes.summary}</ReactMarkdown>
                 </div>
@@ -123,7 +123,7 @@ export const MainContent: React.FC = () => {
         </div>
       </section>
 
-      <section className="flex-1 flex flex-col w-full max-sm:h-auto flex-[0_0_40%]">
+      <section className="flex-1 flex flex-col w-full max-sm:h-auto flex-[0_0_45%]">
         <h2 className="px-4 pt-5 pb-3 w-full text-2xl font-bold leading-7 text-neutral-900 max-md:text-xl max-sm:px-3 max-sm:pt-4 max-sm:pb-3 max-sm:text-lg">
           チャット
         </h2>
@@ -132,7 +132,7 @@ export const MainContent: React.FC = () => {
           {!minutes.is_transcripted ? (
             <div>文字起こしデータ取得中...</div>
           ) : minutes.session_id ? (
-            <div className="flex-1 flex flex-col w-full min-h-0 overflow-y-auto max-h-[35vh]">
+            <div className="flex-1 flex flex-col w-full min-h-0 overflow-y-auto max-h-[40vh]">
               <ChatInterface />
             </div>
           ) : (

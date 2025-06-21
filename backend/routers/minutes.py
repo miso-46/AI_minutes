@@ -82,6 +82,7 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
             video_url = await storage.upload_video(f, minutes_id)
         if not video_url:
             raise Exception("動画のアップロードに失敗しました")
+        await crud.update_video_progress(db, minutes_id, 10)
         
         # 2. 動画データのURLを更新
         video = crud.get_video(db, minutes_id)
@@ -91,15 +92,15 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
         db.commit()
         
         # 動画保存完了（30%）
-        await crud.update_video_progress(db, minutes_id, 30)
+        await crud.update_video_progress(db, minutes_id, 20)
         
         # 3. 文字起こしの実行
-        transcript_content = await transcription.transcribe_video(video_url)
+        transcript_content = await transcription.transcribe_video(video_url, db, minutes_id)
         if not transcript_content:
             raise Exception("文字起こしに失敗しました")
         
         # 文字起こし完了（60%）
-        await crud.update_video_progress(db, minutes_id, 60)
+        await crud.update_video_progress(db, minutes_id, 80)
         
         # 4. 文字起こしデータの保存
         transcript_id = await crud.create_transcript(db, video.id, transcript_content)
@@ -112,7 +113,7 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
             raise Exception("チャンク分割に失敗しました")
         
         # チャンク分割完了（80%）
-        await crud.update_video_progress(db, minutes_id, 80)
+        await crud.update_video_progress(db, minutes_id, 90)
         
         # 6. チャンクの保存とベクトル化
         total_chunks = len(chunks)
@@ -131,9 +132,8 @@ async def process_video(file_path: str, minutes_id: int, db: Session):
                 await crud.create_vector_embedding(chunk_db, chunk_id, embedding_vector)
                 chunk_db.commit()
                 
-                # Embedding生成の進捗を更新（80-95%）
-                progress = 80 + int((i + 1) / total_chunks * 15)
-                await crud.update_video_progress(db, minutes_id, progress)
+                # Embedding生成の進捗を更新（95%）
+                await crud.update_video_progress(db, minutes_id, 95)
             finally:
                 chunk_db.close()
         

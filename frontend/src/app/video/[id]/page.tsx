@@ -5,6 +5,7 @@ import useSWR from 'swr';
 import { Header } from '@/components/Header';
 import { VideoSidebar } from '@/components/VideoSidebar';
 import { MainContent } from '@/components/MainContent';
+import { ProgressBar } from '@/components/ProgressBar';
 import { useParams } from 'next/navigation';
 import { useMinutes } from "@/contexts/MinutesContext";
 
@@ -12,7 +13,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 type StatusResponse = {
   minutes_id: string;
-  status: 'queued' | 'processing' | 'completed' | 'failed'; // 例
+  status: 'queued' | 'processing' | 'completed' | 'failed';
   progress: number; // 0-100
 };
 
@@ -27,38 +28,48 @@ export default function VideoPage() {
   const { id } = useParams() as { id: string };
   const { setMinutes } = useMinutes();
   const { minutes } = useMinutes();
-  const [isCompleted, setIsCompleted] = useState(false)
-  console.log("VideoPage minutes: ",minutes)
-  /* 1) ステータス監視 3 秒おき。completed / failed で自動停止 */
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  console.log("VideoPage minutes: ", minutes);
+
+  /* 1) ステータス監視 3秒おき。completed / failed で自動停止 */
   const {
     data: statusInfo,
     error: statusErr,
   } = useSWR<StatusResponse>(
-    !minutes?.is_transcripted ? `/api/uploadVideo/status/${id}` : null, // ← ここで制御
+    `/api/uploadVideo/status/${id}`,
     fetcher,
     {
       refreshInterval: (data) =>
         !data || data.status === 'processing' || data.status === 'queued'
           ? 3000
           : 0,
+      onSuccess: (data) => {
+        console.log(`[${new Date().toLocaleTimeString()}] Polling status:`, data);
+      },
     }
   );
   
   const { data: resultInfo, error: resultErr, isLoading } = useSWR<ResultResponse>(
-    !minutes?.is_transcripted && statusInfo?.status === 'completed'
+    statusInfo?.status === 'completed'
       ? `/api/uploadVideo/result/${id}`
-      : null, // ← ここで制御
+      : null,
     fetcher,
   );
 
-  const footerMsg = statusErr
-    ? 'ステータス取得に失敗しました'
-    : statusInfo?.status === 'failed'
-    ? '処理に失敗しました'
-    : statusInfo
-    ? `${statusInfo.status} – ${statusInfo.progress}%`
-    : '取得中...';
+  // 処理状態の管理
+  useEffect(() => {
+    if (statusInfo) {
+      if (statusInfo.status === 'queued' || statusInfo.status === 'processing') {
+        setIsProcessing(true);
+      } else if (statusInfo.status === 'completed' || statusInfo.status === 'failed') {
+        setIsProcessing(false);
+        setIsCompleted(true);
+      }
+    }
+  }, [statusInfo]);
 
+  // 結果データの処理
   useEffect(() => {
     // resultを受け取った後かつ、まだ文字起こしされていない時に実行
     if (resultInfo && !minutes.transcript_id) {
@@ -76,20 +87,14 @@ export default function VideoPage() {
         is_chatting: false,
         messages: [],
       });
-      console.log("VideoPage useEffect")
+      console.log("VideoPage useEffect - resultInfo processed");
     }
   }, [resultInfo, setMinutes]);
 
-  useEffect(() => {
-    if (statusInfo?.status === 'completed') {
-      console.log("status: Completed")
-      setIsCompleted(true);
-    }
-  }, [statusInfo]);
-
+  // 既存の議事録データ取得
   useEffect(() => {
     const fetchMinutes = async () => {
-      const res = await fetch(`/api/history/getMinutes/${id}`);
+      const res = await fetch(`/api/history/getMinutesList/${id}`);
       if (res.ok) {
         const data = await res.json();
         setMinutes(prev => ({
@@ -105,29 +110,78 @@ export default function VideoPage() {
           session_id: data.session_id,
           messages: data.messages,
           is_chatting: !!data.session_id,
-          is_embedded: false, // 必要に応じて
+          is_embedded: false,
         }));
       }
     };
-    // complete済みの時に実行
-    if(isCompleted){
-      fetchMinutes();
+    // 処理中でなく、文字起こしデータもまだない場合にのみ取得
+    if (isCompleted) {
+      fetchMinutes(); 
     }
   }, [isCompleted, setMinutes]);
 
-  return (
+  // エラーハンドリング
+  if (statusErr) {
+    return (
+      <div className="flex flex-col w-full bg-white h-screen overflow-hidden">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">
+              エラーが発生しました
+            </h2>
+            <p className="text-gray-600">
+              ステータス取得に失敗しました
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
+  // 処理失敗の場合
+  if (statusInfo?.status === 'failed') {
+    return (
+      <div className="flex flex-col w-full bg-white h-screen overflow-hidden">
+        <div className="flex items-center justify-center h-full">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold text-red-600 mb-2">
+              処理に失敗しました
+            </h2>
+            <p className="text-gray-600">
+              動画の処理中にエラーが発生しました。再度アップロードしてください。
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 通常の表示（処理完了後または既存データ）
+  return (
     <div className="flex flex-col w-full bg-white h-screen overflow-hidden">
       <div className="flex flex-col w-full bg-slate-50 h-full overflow-hidden">
         <Header />
 
-        <div className="flex gap-1 justify-center px-6 py-5 w-full flex-1 min-h-0 max-md:px-4 max-md:py-5 max-sm:flex-col max-sm:px-3 max-sm:py-4">
-          <VideoSidebar />
-          <MainContent />
+         {/* 処理中の場合はプログレスバーを表示 */}
+        {!statusInfo ?
+          <></>
+        :
+        <>
+          {isProcessing ?
+              <ProgressBar 
+                progress={statusInfo.progress} 
+                status={statusInfo.status} 
+              />
+          :
+            <div className="flex gap-1 justify-center px-6 py-5 w-full flex-1 min-h-0 max-md:px-4 max-md:py-5 max-sm:flex-col max-sm:px-3 max-sm:py-4">
+              <VideoSidebar />
+              <MainContent />
+            </div>
+          }
+        </>
+      }
 
-        </div>
       </div>
     </div>
-
   );
 }
