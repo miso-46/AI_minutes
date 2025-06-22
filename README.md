@@ -75,7 +75,7 @@ https://github.com/user-attachments/assets/9e8fa3ce-3506-4bf0-a0ae-06df67fd6604
     - 公式サイト
         - https://azure.microsoft.com/ja-jp/products/storage/blobs
     - 選定利用
-        Supabase Storageは無料プランでは500MBまでだが、Azure Blob Storageは無料枠で月あたり5GBまで使えるため
+        Supabase Storageは無料プランでは1GBまでだが、Azure Blob Storageは無料枠で月あたり5GBまで使えるため
 
 ### 動画処理に用いるライブラリのインストール
 所要時間：10分程度
