@@ -129,12 +129,14 @@ async def transcribe_video(video_url: str, db: Session, minutes_id: int) -> str:
         # 動画の長さを取得
         duration = await get_video_duration(temp_input)
         logger.info(f"動画の長さ: {duration}秒")
-        await crud.update_video_progress(db, minutes_id, 40)
+        await crud.update_video_progress(db, minutes_id, 30)
+        db.commit()
         
         # 動画の圧縮
         logger.info("動画の圧縮を開始")
         await compress_video(temp_input, temp_output)
-        await crud.update_video_progress(db, minutes_id, 60)
+        await crud.update_video_progress(db, minutes_id, 50)
+        db.commit()
         
         # 圧縮後のファイルサイズをチェック
         compressed_size = os.path.getsize(temp_output)
@@ -154,7 +156,8 @@ async def transcribe_video(video_url: str, db: Session, minutes_id: int) -> str:
             # 圧縮後のファイルが制限を超える場合、分割して処理
             logger.info("圧縮後のファイルが制限を超えるため、分割して処理")
             segments = await split_video(temp_input, temp_dir)
-            await crud.update_video_progress(db, minutes_id, 70)
+            await crud.update_video_progress(db, minutes_id, 60)
+            db.commit()
             transcriptions = []
             
             for i, segment in enumerate(segments):
