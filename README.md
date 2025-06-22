@@ -19,6 +19,7 @@ https://github.com/user-attachments/assets/9e8fa3ce-3506-4bf0-a0ae-06df67fd6604
 - **フレームワーク**: FastAPI
 - **データベース**: Supabase（PostgreSQL）
 - **ストレージ**: Azure Blob Storage
+- **AIモデル**: Azure AI Foundry 
 - **ORM**: SQLAlchemy
 - **認証**: JWT
 - **その他**: Python 3.8+
@@ -63,7 +64,7 @@ https://github.com/user-attachments/assets/9e8fa3ce-3506-4bf0-a0ae-06df67fd6604
 - Node.js 18以上
 - PostgreSQL
 
-### リソースのセットアップ
+### 各種外部リソースのセットアップ
 1. Supabaseでプロジェクト作成
     - 公式サイト
         - https://supabase.com/
@@ -71,11 +72,13 @@ https://github.com/user-attachments/assets/9e8fa3ce-3506-4bf0-a0ae-06df67fd6604
         - 無料プランかつ、pgvector拡張ベクターデータが扱えて、Auth機能が簡単に実装できるから
     - 今回のER図
         - https://dbdiagram.io/d/app_minutes_step3_homework-6839a559bd74709cb74a4557
-3. Azure Blob Storage内にvideoコンテナを作成
+2. Azure Blob Storage内にvideoコンテナを作成
     - 公式サイト
         - https://azure.microsoft.com/ja-jp/products/storage/blobs
     - 選定利用
         Supabase Storageは無料プランでは1GBまでだが、Azure Blob Storageは無料枠で月あたり5GBまで使えるため
+3. Azure AI Foundryにモデル構築
+    - 汎用モデル、エンベディング用モデル、文字起こし用モデルの3つを立ち上げる
 
 ### 動画処理に用いるライブラリのインストール
 所要時間：10分程度
