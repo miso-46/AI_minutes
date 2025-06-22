@@ -3,6 +3,9 @@
 ## 💡 概要
 このアプリケーションは、効率的な講義理解を実現するためのWebアプリケーションです。講義動画をアップロードすると、文字起こし、要約、AIチャットボット機能を用いて講義内容を効率的に理解できます。
 
+## デモ動画
+https://github.com/user-attachments/assets/9e8fa3ce-3506-4bf0-a0ae-06df67fd6604
+
 ## 🚀 主な機能
 - ユーザー認証
 - 動画のアップロード
@@ -174,3 +177,4 @@ npm run dev
 
 ## 文字起こし（SST）モデル比較
 - https://artificialanalysis.ai/speech-to-text
+- <img width="1310" alt="スクリーンショット 2025-06-22 12 25 23" src="https://github.com/user-attachments/assets/c3458d51-a5a9-40c8-8a8d-0f676b6fb015" />
